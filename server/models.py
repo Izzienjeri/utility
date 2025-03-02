@@ -1,16 +1,19 @@
 import uuid
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from flask_marshmallow import Marshmallow
 from datetime import datetime
 
-# Initialize SQLAlchemy and Bcrypt
+# Initialize extensions
 db = SQLAlchemy()
 bcrypt = Bcrypt()
+ma = Marshmallow()
 
 def generate_uuid():
     """Generate a UUID for primary keys"""
     return str(uuid.uuid4())
 
+# User Model
 class User(db.Model):
     __tablename__ = "users"
     
@@ -30,9 +33,7 @@ class User(db.Model):
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
 
-    def __repr__(self):
-        return f"<User {self.full_name} - {self.email}>"
-
+# Bill Model
 class Bill(db.Model):
     __tablename__ = "bills"
 
@@ -48,9 +49,7 @@ class Bill(db.Model):
 
     user = db.relationship("User", backref="bills")
 
-    def __repr__(self):
-        return f"<Bill {self.bill_type} - {self.amount} KES - {self.status}>"
-
+# Payment Model
 class Payment(db.Model):
     __tablename__ = "payments"
 
@@ -65,5 +64,28 @@ class Payment(db.Model):
     bill = db.relationship("Bill", backref="payments")
     user = db.relationship("User", backref="payments")
 
-    def __repr__(self):
-        return f"<Payment {self.payment_reference} - {self.amount_paid} KES - {self.status}>"
+# User Schema
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        load_instance = True  # Deserialize to model instances
+
+# Bill Schema
+class BillSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Bill
+        load_instance = True
+
+# Payment Schema
+class PaymentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Payment
+        load_instance = True
+
+# Initialize Schemas
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+bill_schema = BillSchema()
+bills_schema = BillSchema(many=True)
+payment_schema = PaymentSchema()
+payments_schema = PaymentSchema(many=True)

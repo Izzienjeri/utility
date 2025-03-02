@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, Payment, Bill
+from models import db, Payment, Bill, payment_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
 
@@ -18,23 +18,22 @@ class PaymentResource(Resource):
         if not bill:
             return {"message": "Bill not found"}, 404
         
-        response = initiate_mpesa_payment(bill.amount, bill.payment_details)
+        response = initiate_mpesa_payment(bill.amount, bill.payment_method)
         if response.get("status") == "success":
             new_payment = Payment(
                 user_id=user_id,
                 bill_id=bill_id,
-                amount=bill.amount,
-                reference_number=response.get("transaction_id"),
-                status="paid"
+                amount_paid=bill.amount,
+                payment_reference=response.get("transaction_id"),
+                status="Completed"
             )
             db.session.add(new_payment)
             db.session.commit()
 
-            bill.status = "paid"
+            bill.status = "Paid"
             db.session.commit()
 
-            return {"message": "Payment successful", "transaction_id": response.get("transaction_id")}, 200
-        else:
-            return {"message": "Payment failed"}, 400
+            return jsonify({"message": "Payment successful", "transaction_id": response.get("transaction_id")})
+        return {"message": "Payment failed"}, 400
 
 api.add_resource(PaymentResource, "/pay")

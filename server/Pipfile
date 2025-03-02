@@ -18,6 +18,8 @@ python-dotenv = "*"
 requests = "*"
 celery = "*"
 redis = "*"
+marshmallow = "*"
+flask-marshmallow = "*"
 
 [dev-packages]
 

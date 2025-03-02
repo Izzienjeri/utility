@@ -9,6 +9,8 @@ from models import db, bcrypt
 from routes.auth_routes import auth_blueprint
 from routes.bill_routes import bill_blueprint
 from routes.payment_routes import payment_blueprint
+from flask_marshmallow import Marshmallow
+
 
 # Initialize Celery
 def make_celery(app):
@@ -30,6 +32,7 @@ bcrypt.init_app(app)
 jwt = JWTManager(app)
 mail = Mail(app)
 CORS(app)
+ma = Marshmallow(app)  # 🔥 Add this line
 
 # Initialize Celery
 celery = make_celery(app)
