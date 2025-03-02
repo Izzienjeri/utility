@@ -1,0 +1,24 @@
+from celery import Celery
+from celery.schedules import crontab
+from app import app
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+
+celery.conf.beat_schedule = {
+    'send_reminder_3_days_before_due': {
+        'task': 'tasks.send_email_reminder',
+        'schedule': crontab(day_of_week='sun', hour=10, minute=30),
+        'args': (1,),  # pass the bill_id
+    },
+    'send_due_date_email': {
+        'task': 'tasks.send_due_date_email',
+        'schedule': crontab(day_of_week='sun', hour=10, minute=0),
+        'args': (1,),  # pass the bill_id
+    },
+    'send_unpaid_bill_email': {
+        'task': 'tasks.send_unpaid_bill_email',
+        'schedule': crontab(day_of_week='sun', hour=8, minute=0),
+        'args': (1,),  # pass the bill_id
+    },
+}

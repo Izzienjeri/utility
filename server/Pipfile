@@ -20,7 +20,6 @@ flask-marshmallow = "*"
 marshmallow-sqlalchemy = "*"
 flask-mail = "*"
 twilio = "*"
-celery = "*"
 redis = "*"
 
 [dev-packages]
