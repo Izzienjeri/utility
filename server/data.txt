@@ -1,0 +1,474 @@
+
+========================================
+models.py
+========================================
+
+import uuid
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_marshmallow import Marshmallow
+from datetime import datetime
+
+# Initialize extensions
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+ma = Marshmallow()
+
+def generate_uuid():
+    """Generate a UUID for primary keys"""
+    return str(uuid.uuid4())
+
+# User Model
+class User(db.Model):
+    __tablename__ = "users"
+    
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    full_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    phone = db.Column(db.String(15), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, full_name, email, phone, password):
+        self.full_name = full_name
+        self.email = email
+        self.phone = phone
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+
+# Bill Model
+class Bill(db.Model):
+    __tablename__ = "bills"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    bill_type = db.Column(db.String(50), nullable=False)  # Electricity, Rent, Water, etc.
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)  # Paybill, Till, Send Money
+    account_number = db.Column(db.String(50), nullable=False)
+    due_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default="Pending")  # Pending, Paid
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="bills")
+
+# Payment Model
+class Payment(db.Model):
+    __tablename__ = "payments"
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    bill_id = db.Column(db.String(36), db.ForeignKey("bills.id"), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    amount_paid = db.Column(db.Float, nullable=False)
+    payment_reference = db.Column(db.String(100), unique=True, nullable=False)
+    status = db.Column(db.String(20), default="Completed")  # Completed, Failed
+    paid_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    bill = db.relationship("Bill", backref="payments")
+    user = db.relationship("User", backref="payments")
+
+# User Schema
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        load_instance = True  # Deserialize to model instances
+
+# Bill Schema
+class BillSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Bill
+        load_instance = True
+
+# Payment Schema
+class PaymentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Payment
+        load_instance = True
+
+# Initialize Schemas
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+bill_schema = BillSchema()
+bills_schema = BillSchema(many=True)
+payment_schema = PaymentSchema()
+payments_schema = PaymentSchema(many=True)
+
+
+
+========================================
+config.py
+========================================
+
+import os
+
+class Config:
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+    MAIL_SERVER = os.getenv('MAIL_SERVER')
+    MAIL_PORT = int(os.getenv('MAIL_PORT'))
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+
+
+========================================
+app.py
+========================================
+
+from flask import Flask
+from flask_migrate import Migrate # Import Flask-Migrate
+from flask_jwt_extended import JWTManager
+from flask_mail import Mail
+from flask_cors import CORS
+from celery import Celery
+from config import Config
+from models import db, bcrypt
+from routes.auth_routes import auth_blueprint
+from routes.bill_routes import bill_blueprint
+from routes.payment_routes import payment_blueprint
+from flask_marshmallow import Marshmallow
+
+
+# Initialize Celery
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        broker=app.config['CELERY_BROKER_URL'],
+        backend=app.config['CELERY_RESULT_BACKEND']
+    )
+    celery.conf.update(app.config)
+    return celery
+
+# Initialize Flask App
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# Initialize Extensions
+db.init_app(app)
+bcrypt.init_app(app)
+jwt = JWTManager(app)
+mail = Mail(app)
+CORS(app)
+ma = Marshmallow(app)  # 🔥 Add this line
+
+# Initialize Celery
+celery = make_celery(app)
+
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)  # Initialize Migrate
+
+# Register Blueprints
+app.register_blueprint(auth_blueprint, url_prefix="/auth")
+app.register_blueprint(bill_blueprint, url_prefix="/bills")
+app.register_blueprint(payment_blueprint, url_prefix="/payments")
+
+# Database Creation
+def create_tables():
+    with app.app_context():
+        db.create_all()
+
+# Create tables when the app starts
+with app.app_context():
+    db.create_all()
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+
+========================================
+migrations/env.py
+========================================
+
+import logging
+from logging.config import fileConfig
+
+from flask import current_app
+
+from alembic import context
+
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
+config = context.config
+
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
+fileConfig(config.config_file_name)
+logger = logging.getLogger('alembic.env')
+
+
+def get_engine():
+    try:
+        # this works with Flask-SQLAlchemy<3 and Alchemical
+        return current_app.extensions['migrate'].db.get_engine()
+    except (TypeError, AttributeError):
+        # this works with Flask-SQLAlchemy>=3
+        return current_app.extensions['migrate'].db.engine
+
+
+def get_engine_url():
+    try:
+        return get_engine().url.render_as_string(hide_password=False).replace(
+            '%', '%%')
+    except AttributeError:
+        return str(get_engine().url).replace('%', '%%')
+
+
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+config.set_main_option('sqlalchemy.url', get_engine_url())
+target_db = current_app.extensions['migrate'].db
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
+
+
+def get_metadata():
+    if hasattr(target_db, 'metadatas'):
+        return target_db.metadatas[None]
+    return target_db.metadata
+
+
+def run_migrations_offline():
+    """Run migrations in 'offline' mode.
+
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
+    """
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url, target_metadata=get_metadata(), literal_binds=True
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online():
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+
+    # this callback is used to prevent an auto-migration from being generated
+    # when there are no changes to the schema
+    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
+    def process_revision_directives(context, revision, directives):
+        if getattr(config.cmd_opts, 'autogenerate', False):
+            script = directives[0]
+            if script.upgrade_ops.is_empty():
+                directives[:] = []
+                logger.info('No changes in schema detected.')
+
+    conf_args = current_app.extensions['migrate'].configure_args
+    if conf_args.get("process_revision_directives") is None:
+        conf_args["process_revision_directives"] = process_revision_directives
+
+    connectable = get_engine()
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=get_metadata(),
+            **conf_args
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+
+
+========================================
+routes/auth_routes.py
+========================================
+
+from flask import Blueprint, request, jsonify
+from flask_restful import Api, Resource
+from models import db, User, user_schema
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import datetime
+
+auth_blueprint = Blueprint("auth", __name__)
+api = Api(auth_blueprint)
+
+class Register(Resource):
+    def post(self):
+        data = request.get_json()
+        
+        errors = user_schema.validate(data)
+        if errors:
+            return {"errors": errors}, 400
+        
+        if User.query.filter_by(email=data["email"]).first():
+            return {"message": "Email already exists"}, 400
+        
+        new_user = User(
+            full_name=data["full_name"],
+            email=data["email"],
+            phone=data["phone"],
+            password=data["password"]
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user)})
+
+class Login(Resource):
+    def post(self):
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        user = User.query.filter_by(email=email).first()
+        if not user or not user.check_password(password):
+            return {"message": "Invalid credentials"}, 401
+        
+        access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
+        return jsonify({"access_token": access_token})
+
+api.add_resource(Register, "/register")
+api.add_resource(Login, "/login")
+
+
+
+========================================
+routes/payment_routes.py
+========================================
+
+from flask import Blueprint, request, jsonify
+from flask_restful import Api, Resource
+from models import db, Payment, Bill, payment_schema
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from utils.mpesa import initiate_mpesa_payment
+
+payment_blueprint = Blueprint("payments", __name__)
+api = Api(payment_blueprint)
+
+class PaymentResource(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        bill_id = data.get("bill_id")
+
+        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
+        if not bill:
+            return {"message": "Bill not found"}, 404
+        
+        response = initiate_mpesa_payment(bill.amount, bill.payment_method)
+        if response.get("status") == "success":
+            new_payment = Payment(
+                user_id=user_id,
+                bill_id=bill_id,
+                amount_paid=bill.amount,
+                payment_reference=response.get("transaction_id"),
+                status="Completed"
+            )
+            db.session.add(new_payment)
+            db.session.commit()
+
+            bill.status = "Paid"
+            db.session.commit()
+
+            return jsonify({"message": "Payment successful", "transaction_id": response.get("transaction_id")})
+        return {"message": "Payment failed"}, 400
+
+api.add_resource(PaymentResource, "/pay")
+
+
+
+========================================
+routes/bill_routes.py
+========================================
+
+from flask import Blueprint, request, jsonify
+from flask_restful import Api, Resource
+from models import db, Bill, bill_schema, bills_schema
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+bill_blueprint = Blueprint("bills", __name__)
+api = Api(bill_blueprint)
+
+class BillResource(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        
+        errors = bill_schema.validate(data)
+        if errors:
+            return {"errors": errors}, 400
+        
+        new_bill = Bill(
+            user_id=user_id,
+            bill_type=data["bill_type"],
+            amount=data["amount"],
+            payment_method=data["payment_method"],
+            account_number=data["account_number"],
+            due_date=data["due_date"],
+            status="Pending"
+        )
+
+        db.session.add(new_bill)
+        db.session.commit()
+        return jsonify({"message": "Bill added successfully", "bill": bill_schema.dump(new_bill)})
+
+    @jwt_required()
+    def get(self):
+        user_id = get_jwt_identity()
+        bills = Bill.query.filter_by(user_id=user_id).all()
+        return jsonify(bills_schema.dump(bills))
+
+api.add_resource(BillResource, "/")
+
+
+
+========================================
+utils/mpesa.py
+========================================
+
+import requests
+import os
+
+def initiate_mpesa_payment(amount, paybill):
+    mpesa_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('MPESA_ACCESS_TOKEN')}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "BusinessShortCode": paybill,
+        "Amount": amount,
+        "PartyA": os.getenv("MPESA_PHONE_NUMBER"),
+        "PartyB": paybill,
+        "PhoneNumber": os.getenv("MPESA_PHONE_NUMBER"),
+        "CallBackURL": os.getenv("MPESA_CALLBACK_URL"),
+        "TransactionDesc": "Utility Bill Payment"
+    }
+    response = requests.post(mpesa_url, json=payload, headers=headers)
+    return response.json()
+
+
