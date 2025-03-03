@@ -2,7 +2,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS  
 from celery import Celery
 from config import Config
 from models import db, bcrypt
@@ -11,7 +11,7 @@ from routes.bill_routes import bill_blueprint
 from routes.payment_routes import payment_blueprint
 from flask_marshmallow import Marshmallow
 
-# Initialize Celery
+
 def make_celery(app):
     celery = Celery(
         app.import_name,
@@ -21,35 +21,35 @@ def make_celery(app):
     celery.conf.update(app.config)
     return celery
 
-# Initialize Flask App
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Initialize Extensions
+
 db.init_app(app)
 bcrypt.init_app(app)
 jwt = JWTManager(app)
 mail = Mail(app)
-CORS(app, resources={r"/auth/*": {"origins": "*"}}, supports_credentials=True) # Configure CORS <---- IMPORTANT
-ma = Marshmallow(app)  # 🔥 Add this line
+CORS(app, resources={r"/auth/*": {"origins": "*"}}, supports_credentials=True) 
+ma = Marshmallow(app)  
 
-# Initialize Celery
+
 celery = make_celery(app)
 
-# Initialize Flask-Migrate
-migrate = Migrate(app, db)  # Initialize Migrate
 
-# Register Blueprints
+migrate = Migrate(app, db)  
+
+
 app.register_blueprint(auth_blueprint, url_prefix="/auth")
 app.register_blueprint(bill_blueprint, url_prefix="/bills")
 app.register_blueprint(payment_blueprint, url_prefix="/payments")
 
-# Database Creation
+
 def create_tables():
     with app.app_context():
         db.create_all()
 
-# Create tables when the app starts
+
 with app.app_context():
     db.create_all()
 

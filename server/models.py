@@ -6,7 +6,7 @@ from datetime import datetime
 from marshmallow import fields, validate
 
 
-# Initialize extensions
+
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 ma = Marshmallow()
@@ -15,7 +15,7 @@ def generate_uuid():
     """Generate a UUID for primary keys"""
     return str(uuid.uuid4())
 
-# User Model
+
 class User(db.Model):
     __tablename__ = "users"
     
@@ -36,23 +36,23 @@ class User(db.Model):
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
 
-# Bill Model
+
 class Bill(db.Model):
     __tablename__ = "bills"
 
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    bill_type = db.Column(db.String(50), nullable=False)  # Electricity, Rent, Water, etc.
+    bill_type = db.Column(db.String(50), nullable=False)  
     amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)  # Paybill, Till, Send Money
+    payment_method = db.Column(db.String(50), nullable=False)  
     account_number = db.Column(db.String(50), nullable=False)
     due_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default="Pending")  # Pending, Paid
+    status = db.Column(db.String(20), default="Pending")  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="bills")
 
-# Payment Model
+
 class Payment(db.Model):
     __tablename__ = "payments"
 
@@ -61,38 +61,38 @@ class Payment(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     amount_paid = db.Column(db.Float, nullable=False)
     payment_reference = db.Column(db.String(100), unique=True, nullable=False)
-    status = db.Column(db.String(20), default="Completed")  # Completed, Failed
+    status = db.Column(db.String(20), default="Completed")  
     paid_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bill = db.relationship("Bill", backref="payments")
     user = db.relationship("User", backref="payments")
 
-# User Schema
+
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
         load_instance = True
-        exclude = ("password_hash",)  # Don't expose the password hash
+        exclude = ("password_hash",)  
     
-    # Explicitly define fields with validation
+    
     full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
     email = fields.Email(required=True)
     phone = fields.String(required=True, validate=validate.Length(min=10, max=15))
     password = fields.String(required=True, validate=validate.Length(min=8), load_only=True)
 
-# Bill Schema
+
 class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
 
-# Payment Schema
+
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Payment
         load_instance = True
 
-# Initialize Schemas
+
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 bill_schema = BillSchema()
