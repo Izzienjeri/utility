@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, User, user_schema
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
 import datetime
 
 auth_blueprint = Blueprint("auth", __name__)
@@ -42,5 +42,13 @@ class Login(Resource):
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
         return jsonify({"access_token": access_token})
 
+class Logout(Resource):
+    @jwt_required()
+    def post(self):
+        response = jsonify({"message": "Successfully logged out"})
+        unset_jwt_cookies(response)
+        return response
+
 api.add_resource(Register, "/register")
 api.add_resource(Login, "/login")
+api.add_resource(Logout, "/logout")

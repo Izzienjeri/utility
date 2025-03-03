@@ -121,22 +121,138 @@ class Config:
 
 
 ========================================
+tasks.py
+========================================
+
+from flask_mail import Message
+from datetime import datetime, timedelta
+from models import Bill, User, db
+from flask import render_template, current_app
+import os
+from app import celery, mail
+
+@celery.task
+def send_upcoming_bill_reminders():
+    """Send reminders for bills due in 3 days"""
+    with current_app.app_context():
+        # Calculate the date 3 days from now
+        reminder_date = datetime.utcnow().date() + timedelta(days=3)
+        
+        # Find all bills due on that date with "Pending" status
+        bills = Bill.query.filter_by(due_date=reminder_date, status="Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Upcoming Bill Reminder", 
+                    "Your bill is due in 3 days"
+                )
+        
+        return f"Sent {len(bills)} upcoming bill reminders"
+
+@celery.task
+def send_due_today_reminders():
+    """Send reminders for bills due today"""
+    with current_app.app_context():
+        # Get today's date
+        today = datetime.utcnow().date()
+        
+        # Find all bills due today with "Pending" status
+        bills = Bill.query.filter_by(due_date=today, status="Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Bill Due Today", 
+                    "Your bill is due today - please arrange payment"
+                )
+        
+        return f"Sent {len(bills)} due today reminders"
+
+@celery.task
+def send_overdue_bill_reminders():
+    """Send reminders for bills that are overdue"""
+    with current_app.app_context():
+        # Get today's date
+        today = datetime.utcnow().date()
+        
+        # Find all bills due before today with "Pending" status
+        bills = Bill.query.filter(Bill.due_date < today, Bill.status == "Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                days_overdue = (today - bill.due_date).days
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Overdue Bill Reminder", 
+                    f"Your bill is {days_overdue} days overdue"
+                )
+        
+        return f"Sent {len(bills)} overdue bill reminders"
+
+def send_bill_reminder_email(user, bill, subject_prefix, message_prefix):
+    """Helper function to send an email reminder for a specific bill"""
+    # Create a subject with the bill type
+    subject = f"{subject_prefix}: {bill.bill_type} Bill"
+    
+    # Render the email template with bill details
+    html_body = render_template(
+        'emails/bill_reminder.html',
+        user=user,
+        bill=bill,
+        message=message_prefix
+    )
+    
+    text_body = f"""
+        {message_prefix} for {bill.bill_type}
+        
+        Amount: ${bill.amount}
+        Due Date: {bill.due_date}
+        Account Number: {bill.account_number}
+        Payment Method: {bill.payment_method}
+        
+        Please log in to your account to complete the payment.
+    """
+    
+    # Create and send the email
+    msg = Message(
+        subject=subject,
+        recipients=[user.email],
+        body=text_body,
+        html=html_body
+    )
+    
+    mail.send(msg)
+    return True
+
+
+========================================
 app.py
 ========================================
 
 from flask import Flask
-from flask_migrate import Migrate # Import Flask-Migrate
+from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from flask_cors import CORS
 from celery import Celery
+from celery.schedules import crontab
 from config import Config
 from models import db, bcrypt
 from routes.auth_routes import auth_blueprint
 from routes.bill_routes import bill_blueprint
 from routes.payment_routes import payment_blueprint
+from routes.reminder_routes import reminder_blueprint
 from flask_marshmallow import Marshmallow
-
+import os
 
 # Initialize Celery
 def make_celery(app):
@@ -146,11 +262,40 @@ def make_celery(app):
         backend=app.config['CELERY_RESULT_BACKEND']
     )
     celery.conf.update(app.config)
+    
+    # Configure periodic tasks
+    celery.conf.beat_schedule = {
+        'upcoming-bill-reminders': {
+            'task': 'utils.email_tasks.send_upcoming_bill_reminders',
+            'schedule': crontab(hour=9, minute=0),  # Run daily at 9:00 AM
+        },
+        'due-today-reminders': {
+            'task': 'utils.email_tasks.send_due_today_reminders',
+            'schedule': crontab(hour=8, minute=0),  # Run daily at 8:00 AM
+        },
+        'overdue-bill-reminders': {
+            'task': 'utils.email_tasks.send_overdue_bill_reminders',
+            'schedule': crontab(hour=10, minute=0, day_of_week=1),  # Run weekly on Mondays at 10:00 AM
+        },
+    }
+    
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+    
+    celery.Task = ContextTask
     return celery
 
 # Initialize Flask App
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Create template directories if they don't exist
+os.makedirs('utils/templates/emails', exist_ok=True)
+
+# Set the template folder path to include utils/templates
+app.template_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/templates')
 
 # Initialize Extensions
 db.init_app(app)
@@ -158,18 +303,19 @@ bcrypt.init_app(app)
 jwt = JWTManager(app)
 mail = Mail(app)
 CORS(app)
-ma = Marshmallow(app)  # 🔥 Add this line
+ma = Marshmallow(app)
 
 # Initialize Celery
 celery = make_celery(app)
 
 # Initialize Flask-Migrate
-migrate = Migrate(app, db)  # Initialize Migrate
+migrate = Migrate(app, db)
 
 # Register Blueprints
 app.register_blueprint(auth_blueprint, url_prefix="/auth")
 app.register_blueprint(bill_blueprint, url_prefix="/bills")
 app.register_blueprint(payment_blueprint, url_prefix="/payments")
+app.register_blueprint(reminder_blueprint, url_prefix="/reminders")
 
 # Database Creation
 def create_tables():
@@ -358,6 +504,81 @@ api.add_resource(Login, "/login")
 
 
 ========================================
+routes/reminder_routes.py
+========================================
+
+from flask import Blueprint, request, jsonify
+from flask_restful import Api, Resource
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import db, Bill, User
+from utils.email_tasks import send_bill_reminder_email, send_upcoming_bill_reminders, send_due_today_reminders, send_overdue_bill_reminders
+
+reminder_blueprint = Blueprint("reminders", __name__)
+api = Api(reminder_blueprint)
+
+class ManualReminderResource(Resource):
+    @jwt_required()
+    def post(self):
+        """
+        Manually send a reminder for a specific bill
+        Requires bill_id in the request JSON
+        """
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        bill_id = data.get("bill_id")
+        
+        if not bill_id:
+            return {"message": "Bill ID is required"}, 400
+            
+        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
+        if not bill:
+            return {"message": "Bill not found"}, 404
+            
+        user = User.query.get(user_id)
+        
+        result = send_bill_reminder_email(
+            user,
+            bill,
+            "Manual Reminder",
+            "This is a reminder about your upcoming bill"
+        )
+        
+        if result:
+            return {"message": "Reminder sent successfully"}, 200
+        else:
+            return {"message": "Failed to send reminder"}, 500
+
+class BatchReminderResource(Resource):
+    @jwt_required()
+    def post(self):
+        """
+        Manually trigger batch reminders
+        Requires reminder_type in the request JSON
+        """
+        data = request.get_json()
+        reminder_type = data.get("reminder_type")
+        
+        if not reminder_type:
+            return {"message": "Reminder type is required"}, 400
+            
+        if reminder_type == "upcoming":
+            task = send_upcoming_bill_reminders.delay()
+            return {"message": "Upcoming bill reminders scheduled", "task_id": task.id}, 200
+        elif reminder_type == "due_today":
+            task = send_due_today_reminders.delay()
+            return {"message": "Due today reminders scheduled", "task_id": task.id}, 200
+        elif reminder_type == "overdue":
+            task = send_overdue_bill_reminders.delay()
+            return {"message": "Overdue bill reminders scheduled", "task_id": task.id}, 200
+        else:
+            return {"message": "Invalid reminder type. Use 'upcoming', 'due_today', or 'overdue'"}, 400
+
+# Register resources
+api.add_resource(ManualReminderResource, "/send")
+api.add_resource(BatchReminderResource, "/batch")
+
+
+========================================
 routes/payment_routes.py
 ========================================
 
@@ -474,4 +695,142 @@ def initiate_mpesa_payment(amount, paybill):
     response = requests.post(mpesa_url, json=payload, headers=headers)
     return response.json()
 
+
+
+========================================
+utils/run_celery.beat.py
+========================================
+
+from app import celery
+
+if __name__ == '__main__':
+    celery.worker_main(['worker', '--loglevel=info'])
+
+
+========================================
+utils/email_tasks.py
+========================================
+
+from flask_mail import Message
+from datetime import datetime, timedelta
+from models import Bill, User, db
+from flask import render_template, current_app
+import os
+from app import celery, mail
+
+@celery.task
+def send_upcoming_bill_reminders():
+    """Send reminders for bills due in 3 days"""
+    with current_app.app_context():
+        # Calculate the date 3 days from now
+        reminder_date = datetime.utcnow().date() + timedelta(days=3)
+        
+        # Find all bills due on that date with "Pending" status
+        bills = Bill.query.filter_by(due_date=reminder_date, status="Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Upcoming Bill Reminder", 
+                    "Your bill is due in 3 days"
+                )
+        
+        return f"Sent {len(bills)} upcoming bill reminders"
+
+@celery.task
+def send_due_today_reminders():
+    """Send reminders for bills due today"""
+    with current_app.app_context():
+        # Get today's date
+        today = datetime.utcnow().date()
+        
+        # Find all bills due today with "Pending" status
+        bills = Bill.query.filter_by(due_date=today, status="Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Bill Due Today", 
+                    "Your bill is due today - please arrange payment"
+                )
+        
+        return f"Sent {len(bills)} due today reminders"
+
+@celery.task
+def send_overdue_bill_reminders():
+    """Send reminders for bills that are overdue"""
+    with current_app.app_context():
+        # Get today's date
+        today = datetime.utcnow().date()
+        
+        # Find all bills due before today with "Pending" status
+        bills = Bill.query.filter(Bill.due_date < today, Bill.status == "Pending").all()
+        
+        for bill in bills:
+            user = User.query.get(bill.user_id)
+            if user:
+                days_overdue = (today - bill.due_date).days
+                send_bill_reminder_email(
+                    user, 
+                    bill, 
+                    "Overdue Bill Reminder", 
+                    f"Your bill is {days_overdue} days overdue"
+                )
+        
+        return f"Sent {len(bills)} overdue bill reminders"
+
+def send_bill_reminder_email(user, bill, subject_prefix, message_prefix):
+    """Helper function to send an email reminder for a specific bill"""
+    # Create a subject with the bill type
+    subject = f"{subject_prefix}: {bill.bill_type} Bill"
+    
+    # Get the current date for the template
+    current_date = datetime.utcnow()
+    
+    # Render the email template with bill details
+    html_body = render_template(
+        'emails/bill_reminder.html',
+        user=user,
+        bill=bill,
+        message=message_prefix,
+        now=current_date
+    )
+    
+    text_body = f"""
+        {message_prefix} for {bill.bill_type}
+        
+        Amount: ${bill.amount}
+        Due Date: {bill.due_date}
+        Account Number: {bill.account_number}
+        Payment Method: {bill.payment_method}
+        
+        Please log in to your account to complete the payment.
+    """
+    
+    # Create and send the email
+    msg = Message(
+        subject=subject,
+        recipients=[user.email],
+        body=text_body,
+        html=html_body
+    )
+    
+    mail.send(msg)
+    return True
+
+
+========================================
+utils/run_celery.py
+========================================
+
+from app import celery
+
+if __name__ == '__main__':
+    celery.worker_main(['worker', '--loglevel=info'])
 
