@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_marshmallow import Marshmallow
 from datetime import datetime
+from marshmallow import fields, validate
+
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -25,6 +27,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __init__(self, full_name, email, phone, password):
+        self.id = generate_uuid()
         self.full_name = full_name
         self.email = email
         self.phone = phone
@@ -68,7 +71,14 @@ class Payment(db.Model):
 class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        load_instance = True  # Deserialize to model instances
+        load_instance = True
+        exclude = ("password_hash",)  # Don't expose the password hash
+    
+    # Explicitly define fields with validation
+    full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
+    email = fields.Email(required=True)
+    phone = fields.String(required=True, validate=validate.Length(min=10, max=15))
+    password = fields.String(required=True, validate=validate.Length(min=8), load_only=True)
 
 # Bill Schema
 class BillSchema(ma.SQLAlchemyAutoSchema):

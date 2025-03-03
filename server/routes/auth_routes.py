@@ -11,24 +11,32 @@ class Register(Resource):
     def post(self):
         data = request.get_json()
         
+        # This validates incoming registration data
         errors = user_schema.validate(data)
         if errors:
-            return {"errors": errors}, 400
+            return {"message": "Validation error", "errors": errors}, 400
         
+        # Check if email already exists
         if User.query.filter_by(email=data["email"]).first():
             return {"message": "Email already exists"}, 400
         
+        # Check if phone already exists
+        if User.query.filter_by(phone=data["phone"]).first():
+            return {"message": "Phone number already exists"}, 400
+        
+        # Create new user - the User.__init__ handles password hashing
         new_user = User(
             full_name=data["full_name"],
             email=data["email"],
             phone=data["phone"],
-            password=data["password"]
+            password=data["password"]  # This will be hashed by the User model
         )
+
         db.session.add(new_user)
         db.session.commit()
 
         return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user)})
-
+    
 class Login(Resource):
     def post(self):
         data = request.get_json()
