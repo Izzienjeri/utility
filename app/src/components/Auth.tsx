@@ -1,28 +1,28 @@
+// app/src/components/Auth.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  Lock, 
-  UserPlus, 
-  LogOut, 
-  Mail, 
-  Phone, 
-  Eye, 
-  EyeOff, 
+import {
+  Lock,
+  UserPlus,
+  LogOut,
+  Mail,
+  Phone,
+  Eye,
+  EyeOff,
   Heart,
-  ArrowRight 
+  ArrowRight
 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5000'; // Replace with your backend URL
 
 interface AuthProps {
-  initialRoute: 'login' | 'register' | 'dashboard';
+  initialRoute: 'login' | 'register' | 'billForm' | 'dashboard';
 }
 
 const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
-  const [route, setRoute] = useState(initialRoute);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -32,15 +32,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [userId, setUserId] = useState(''); // Store the user ID
 
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken');
-    if (route === 'dashboard' && !accessToken) {
-      setRoute('login'); // Redirect to login if no token
+    if (initialRoute === 'dashboard' && !accessToken) {
+      router.push('/?page=login'); // Redirect to login if no token
     }
-  }, [route]);
+  }, [initialRoute, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,8 +65,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
       if (response.ok) {
         localStorage.setItem('accessToken', data.access_token);
-        setRoute('dashboard');
-        router.push('/dashboard'); // Redirect to dashboard
+        router.push('/?page=billForm'); // Redirect to Bill Form
       } else {
         setError(data.message || 'Login failed.');
       }
@@ -76,17 +77,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!fullName || !email || !phone || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
-  
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
-  
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
@@ -95,13 +96,15 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         },
         body: JSON.stringify({ full_name: fullName, email, phone, password }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         setSuccessMessage(data.message || 'Registration successful!');
         setError('');
-        setRoute('login'); // Redirect to login after successful registration
+        setUserId(data.user.id); // Save the user ID upon successful registration
+        localStorage.setItem('accessToken', data.access_token);
+        router.push(`/?page=billForm&userId=${data.user.id}`); // Redirect to billForm
       } else {
         // More detailed error handling
         if (data.errors) {
@@ -135,8 +138,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
       if (response.ok) {
         localStorage.removeItem('accessToken');
-        setRoute('login');
-        router.push('/'); // Redirect to login
+        router.push('/?page=login');
       } else {
         console.error('Logout failed');
       }
@@ -156,9 +158,9 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
+    visible: {
       opacity: 1,
-      transition: { 
+      transition: {
         duration: 0.5,
         when: "beforeChildren",
         staggerChildren: 0.1
@@ -172,8 +174,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
+    visible: {
+      y: 0,
       opacity: 1,
       transition: { type: "spring", stiffness: 300, damping: 24 }
     }
@@ -193,14 +195,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         animate="visible"
         exit="exit"
       >
-        <motion.div 
+        <motion.div
           className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
           variants={itemVariants}
         >
           <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
-          
+
           <div className="px-8 pt-8 pb-10">
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center mb-8"
               variants={itemVariants}
             >
@@ -212,7 +214,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             </motion.div>
 
             {error && (
-              <motion.div 
+              <motion.div
                 className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -278,14 +280,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               </motion.div>
             </form>
 
-            <motion.div 
+            <motion.div
               className="mt-8 text-center"
               variants={itemVariants}
             >
               <p className="text-[#BCAFBD]">
                 Don't have an account?{' '}
                 <button
-                  onClick={() => setRoute('register')}
+                  onClick={() => router.push('/?page=register')}
                   className="text-[#E17295] font-medium hover:underline focus:outline-none"
                 >
                   Sign Up
@@ -307,14 +309,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         animate="visible"
         exit="exit"
       >
-        <motion.div 
+        <motion.div
           className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
           variants={itemVariants}
         >
           <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
-          
+
           <div className="px-8 pt-8 pb-10">
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center mb-8"
               variants={itemVariants}
             >
@@ -326,7 +328,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             </motion.div>
 
             {error && (
-              <motion.div 
+              <motion.div
                 className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -337,7 +339,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             )}
 
             {successMessage && (
-              <motion.div 
+              <motion.div
                 className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -455,14 +457,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               </motion.div>
             </form>
 
-            <motion.div 
+            <motion.div
               className="mt-8 text-center"
               variants={itemVariants}
             >
               <p className="text-[#BCAFBD]">
                 Already have an account?{' '}
                 <button
-                  onClick={() => setRoute('login')}
+                  onClick={() => router.push('/?page=login')}
                   className="text-[#E17295] font-medium hover:underline focus:outline-none"
                 >
                   Sign In
@@ -489,9 +491,9 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           variants={itemVariants}
         >
           <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
-          
+
           <div className="px-8 py-12">
-            <motion.div 
+            <motion.div
               className="flex flex-col items-center mb-12"
               variants={itemVariants}
             >
@@ -502,7 +504,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               <p className="text-[#BCAFBD] text-center max-w-md">You've successfully logged in. This is your personal dashboard where you can manage your account.</p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
               variants={itemVariants}
             >
@@ -518,7 +520,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               ))}
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="flex justify-center"
               variants={itemVariants}
             >
@@ -539,15 +541,22 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     </div>
   );
 
-  if (route === 'login') {
-    return renderLoginForm();
-  } else if (route === 'register') {
-    return renderRegisterForm();
-  } else if (route === 'dashboard') {
-    return renderDashboard();
+  let content;
+  switch (initialRoute) {
+    case 'login':
+      content = renderLoginForm();
+      break;
+    case 'register':
+      content = renderRegisterForm();
+      break;
+    case 'dashboard':
+      content = renderDashboard();
+      break;
+    default:
+      content = renderLoginForm(); // Default to login
   }
 
-  return null; // Or a default state
+  return content;
 };
 
 export default Auth;
