@@ -1,0 +1,1472 @@
+File: ./components/Auth.tsx
+================================================================================
+// app/src/components/Auth.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import {
+    Lock,
+    UserPlus,
+    LogOut,
+    Mail,
+    Phone,
+    Eye,
+    EyeOff,
+    Heart,
+    ArrowRight
+} from 'lucide-react';
+import WelcomeScreen from './WelcomeScreen';
+
+const API_BASE_URL = 'http://localhost:5000'; // Replace with your backend URL
+
+interface AuthProps {
+    initialRoute: 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome';
+}
+
+const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [userId, setUserId] = useState(''); // Store the user ID
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!email || !password) {
+            setError('Please enter both email and password.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('accessToken', data.access_token);
+                router.push('/?page=dashboard'); // Redirect to the dashboard after login
+            } else {
+                setError(data.message || 'Login failed.');
+            }
+        } catch (err) {
+            setError('An error occurred during login.');
+            console.error(err);
+        }
+    };
+
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!fullName || !email || !phone || !password || !confirmPassword) {
+            setError('Please fill in all fields.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError('Passwords do not match.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ full_name: fullName, email, phone, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSuccessMessage(data.message || 'Registration successful!');
+                setError('');
+                setUserId(data.user.id); // Save the user ID upon successful registration
+                localStorage.setItem('accessToken', data.access_token);
+                router.push('/?page=dashboard'); // Redirect to the dashboard after registration
+            } else {
+                // More detailed error handling
+                if (data.errors) {
+                    // Format validation errors
+                    const errorMessages = Object.entries(data.errors)
+                        .map(([field, message]) => `${field}: ${message}`)
+                        .join(', ');
+                    setError(`Registration failed: ${errorMessages}`);
+                } else {
+                    setError(data.message || 'Registration failed.');
+                }
+                setSuccessMessage('');
+                console.error('Registration error:', data);
+            }
+        } catch (err) {
+            setError('An error occurred during registration.');
+            setSuccessMessage('');
+            console.error('Registration fetch error:', err);
+        }
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
+    };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                duration: 0.5,
+                when: "beforeChildren",
+                staggerChildren: 0.1
+            }
+        },
+        exit: {
+            opacity: 0,
+            transition: { duration: 0.3 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: "spring", stiffness: 300, damping: 24 }
+        }
+    };
+
+    const buttonVariants = {
+        hover: { scale: 1.05, transition: { duration: 0.2 } },
+        tap: { scale: 0.95, transition: { duration: 0.2 } }
+    };
+
+    const renderLoginForm = () => (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
+            <motion.div
+                className="w-full max-w-md"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+            >
+                <motion.div
+                    className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
+                    variants={itemVariants}
+                >
+                    <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
+
+                    <div className="px-8 pt-8 pb-10">
+                        <motion.div
+                            className="flex flex-col items-center mb-8"
+                            variants={itemVariants}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-4 shadow-lg">
+                                <Lock className="text-white" size={30} />
+                            </div>
+                            <h2 className="text-3xl font-bold text-gray-800">Welcome Back</h2>
+                            <p className="text-[#BCAFBD] mt-2 text-center">Sign in to access your account</p>
+                        </motion.div>
+
+                        {error && (
+                            <motion.div
+                                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                                initial={{ opacity: 0, y: -10 }}
+                               animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
+
+                        <form onSubmit={handleLogin}>
+                            <motion.div className="mb-6" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="email">
+                                    <Mail className="inline-block mr-2" size={16} />
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="email"
+                                        type="email"
+                                        placeholder="your.email@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="mb-8" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="password">
+                                    <Lock className="inline-block mr-2" size={16} />
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="••••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={togglePasswordVisibility}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E17295] focus:outline-none transition-colors duration-200"
+                                    >
+                                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="flex items-center justify-between" variants={itemVariants}>
+                                <motion.button
+                                    className="w-full bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
+                                    type="submit"
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                >
+                                    <span>Sign In</span>
+                                    <ArrowRight className="ml-2" size={18} />
+                                </motion.button>
+                            </motion.div>
+                        </form>
+
+                        <motion.div
+                            className="mt-8 text-center"
+                            variants={itemVariants}
+                        >
+                            <p className="text-[#BCAFBD]">
+                                Don't have an account?{' '}
+                                <button
+                                    onClick={() => router.push('/?page=register')}
+                                    className="text-[#E17295] font-medium hover:underline focus:outline-none"
+                                >
+                                    Sign Up
+                                </button>
+                            </p>
+                        </motion.div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        </div>
+    );
+
+    const renderRegisterForm = () => (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
+            <motion.div
+                className="w-full max-w-md my-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+            >
+                <motion.div
+                    className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
+                    variants={itemVariants}
+                >
+                    <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
+
+                    <div className="px-8 pt-8 pb-10">
+                        <motion.div
+                            className="flex flex-col items-center mb-8"
+                            variants={itemVariants}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-4 shadow-lg">
+                                <UserPlus className="text-white" size={30} />
+                            </div>
+                            <h2 className="text-3xl font-bold text-gray-800">Create Account</h2>
+                            <p className="text-[#BCAFBD] mt-2 text-center">Join us today!</p>
+                        </motion.div>
+
+                        {error && (
+                            <motion.div
+                                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
+
+                        {successMessage && (
+                            <motion.div
+                                className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {successMessage}
+                            </motion.div>
+                        )}
+
+                        <form onSubmit={handleRegister}>
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="fullName">
+                                    <UserPlus className="inline-block mr-2" size={16} />
+                                    Full Name
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                    id="fullName"
+                                    type="text"
+                                    placeholder="John Doe"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                />
+                            </motion.div>
+
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="email">
+                                    <Mail className="inline-block mr-2" size={16} />
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="email"
+                                        type="email"
+                                        placeholder="your.email@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="phone">
+                                    <Phone className="inline-block mr-2" size={16} />
+                                    Phone Number
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="phone"
+                                        type="tel"
+                                        placeholder="+1 (555) 123-4567"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                    />
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="password">
+                                    <Lock className="inline-block mr-2" size={16} />
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="••••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={togglePasswordVisibility}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E17295] focus:outline-none transition-colors duration-200"
+                                    >
+                                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="mb-6" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="confirmPassword">
+                                    <Lock className="inline-block mr-2" size={16} />
+                                    Confirm Password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        placeholder="••••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={toggleConfirmPasswordVisibility}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E17295] focus:outline-none transition-colors duration-200"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="flex items-center justify-between" variants={itemVariants}>
+                                <motion.button
+                                    className="w-full bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
+                                    type="submit"
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                >
+                                    <span>Create Account</span>
+                                    <ArrowRight className="ml-2" size={18} />
+                                </motion.button>
+                            </motion.div>
+                        </form>
+
+                        <motion.div
+                            className="mt-8 text-center"
+                            variants={itemVariants}
+                        >
+                            <p className="text-[#BCAFBD]">
+                                Already have an account?{' '}
+                                <button
+                                    onClick={() => router.push('/?page=login')}
+                                    className="text-[#E17295] font-medium hover:underline focus:outline-none"
+                                >
+                                    Sign In
+                                </button>
+                            </p>
+                        </motion.div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        </div>
+    );
+    let content;
+    switch (initialRoute) {
+        case 'login':
+            content = renderLoginForm();
+            break;
+        case 'register':
+            content = renderRegisterForm();
+            break;
+        default:
+            content = renderLoginForm(); // Default to login
+    }
+
+    return content;
+};
+
+export default Auth;
+================================================================================
+File: ./components/WelcomeScreen.tsx
+================================================================================
+// app/src/components/WelcomeScreen.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { Heart, ArrowRight } from 'lucide-react';
+
+const WelcomeScreen = () => {
+  const router = useRouter();
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  const buttonVariants = {
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.95, transition: { duration: 0.2 } }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
+      <motion.div
+        className="w-full max-w-md"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <motion.div
+          className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
+          variants={itemVariants}
+        >
+          <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
+
+          <div className="px-8 pt-8 pb-10">
+            <motion.div
+              className="flex flex-col items-center mb-8"
+              variants={itemVariants}
+            >
+              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-4 shadow-lg">
+                <Heart className="text-white" size={30} />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800">Welcome to BillEase!</h2>
+              <p className="text-[#BCAFBD] mt-2 text-center">Let’s set up your bills.</p>
+              <p className="text-[#BCAFBD] mt-2 text-center">BillEase makes it easy to track and manage your expenses.
+                Get organized and never miss a payment again!
+              </p>
+            </motion.div>
+
+            <motion.div className="flex items-center justify-center" variants={itemVariants}>
+              <motion.button
+                className="w-full bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={() => router.push('/?page=billForm')}
+              >
+                <span>Get Started</span>
+                <ArrowRight className="ml-2" size={18} />
+              </motion.button>
+            </motion.div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default WelcomeScreen;
+================================================================================
+File: ./components/BillForm.tsx
+================================================================================
+// app/src/components/BillForm.tsx
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Calendar, Wallet, Home, Lightbulb, Droplet, Wifi, Trash2, ArrowRight } from 'lucide-react';
+
+const API_BASE_URL = 'http://localhost:5000'; // Replace with your backend URL
+
+interface BillFormProps {
+    userId: string;
+}
+
+const BillForm: React.FC<BillFormProps> = ({ userId }) => {
+    const [billType, setBillType] = useState('');
+    const [amount, setAmount] = useState('');
+    const [paymentOption, setPaymentOption] = useState(''); // 'paybill' or 'till'
+    const [paybillNumber, setPaybillNumber] = useState('');
+    const [tillNumber, setTillNumber] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [isBillTypeOpen, setIsBillTypeOpen] = useState(false);
+    const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false);
+
+    const billTypes = [
+        { value: "Electricity", icon: <Lightbulb className="inline-block mr-1" size={14} /> },
+        { value: "Rent", icon: <Home className="inline-block mr-1" size={14} /> },
+        { value: "Water", icon: <Droplet className="inline-block mr-1" size={14} /> },
+        { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={14} /> },
+        { value: "Trash", icon: <Trash2 className="inline-block mr-1" size={14} /> },
+    ];
+
+    const paymentOptions = [
+        { value: "paybill", label: "Paybill" },
+        { value: "till", label: "Till Number" },
+    ];
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!billType || !amount || !paymentOption || !dueDate) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
+        // Validation Logic: Check which payment details are required based on paymentOption
+        if (paymentOption === 'paybill' && (!paybillNumber || !accountNumber)) {
+            setError('Paybill requires both Paybill Number and Account Number.');
+            return;
+        }
+
+        if (paymentOption === 'till' && !tillNumber) {
+            setError('Till Number is required for Till payment.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/bills/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+                body: JSON.stringify({
+                    bill_type: billType,
+                    amount: amount,
+                    payment_option: paymentOption,
+                    paybill_number: paybillNumber,
+                    till_number: tillNumber,
+                    account_number: accountNumber,
+                    due_date: dueDate,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setSuccessMessage('Bill added successfully!');
+                setError('');
+                // Clear the form
+                setBillType('');
+                setAmount('');
+                setPaymentOption('');
+                setPaybillNumber('');
+                setTillNumber('');
+                setAccountNumber('');
+                setDueDate('');
+            } else {
+                setError(data.message || 'Failed to add bill.');
+                setSuccessMessage('');
+            }
+        } catch (err) {
+            setError('An error occurred while adding the bill.');
+            setSuccessMessage('');
+            console.error(err);
+        }
+    };
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                duration: 0.5,
+                when: "beforeChildren",
+                staggerChildren: 0.1
+            }
+        },
+        exit: {
+            opacity: 0,
+            transition: { duration: 0.3 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: { type: "spring", stiffness: 300, damping: 24 }
+        }
+    };
+
+    const buttonVariants = {
+        hover: { scale: 1.05, transition: { duration: 0.2 } },
+        tap: { scale: 0.95, transition: { duration: 0.2 } }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
+            <motion.div
+                className="w-full max-w-md"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+            >
+                <motion.div
+                    className="bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
+                    variants={itemVariants}
+                >
+                    <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
+
+                    <div className="px-8 pt-8 pb-10">
+                        <motion.div
+                            className="flex flex-col items-center mb-8"
+                            variants={itemVariants}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-4 shadow-lg">
+                                <Wallet className="text-white" size={30} />
+                            </div>
+                            <h2 className="text-3xl font-bold text-gray-800">Add a Bill</h2>
+                            <p className="text-[#BCAFBD] mt-2 text-center">Enter your bill details below</p>
+                        </motion.div>
+
+                        {error && (
+                            <motion.div
+                                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
+
+                        {successMessage && (
+                            <motion.div
+                                className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {successMessage}
+                            </motion.div>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="billType">
+                                    <span className="inline-block mr-2"><Home size={16} /></span>
+                                    Bill Type
+                                </label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between"
+                                        onClick={() => setIsBillTypeOpen(!isBillTypeOpen)}
+                                    >
+                                        {billType || "Select Bill Type"}
+                                        <span>▼</span>
+                                    </button>
+                                    {isBillTypeOpen && (
+                                        <div className="absolute left-0 mt-1 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                                            <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                                {billTypes.map((type) => (
+                                                    <button
+                                                        key={type.value}
+                                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                                        role="menuitem"
+                                                        onClick={() => {
+                                                            setBillType(type.value);
+                                                            setIsBillTypeOpen(false);
+                                                        }}
+                                                    >
+                                                        <span className="inline-block mr-1">{type.icon}</span>
+                                                        {type.value}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="amount">
+                                    <span className="inline-block mr-2"><Wallet size={16} /></span>
+                                    Amount
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                    id="amount"
+                                    type="number"
+                                    placeholder="Enter Amount"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                />
+                            </motion.div>
+
+                            <motion.div className="mb-4" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="paymentOption">
+                                    Payment Option
+                                </label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between"
+                                        onClick={() => setIsPaymentOptionOpen(!isPaymentOptionOpen)}
+                                    >
+                                        {paymentOption ? paymentOptions.find(option => option.value === paymentOption)?.label : "Select Payment Option"}
+                                        <span>▼</span>
+                                    </button>
+                                    {isPaymentOptionOpen && (
+                                        <div className="absolute left-0 mt-1 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                                            <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                                {paymentOptions.map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                                        role="menuitem"
+                                                        onClick={() => {
+                                                            setPaymentOption(option.value);
+                                                            setIsPaymentOptionOpen(false);
+                                                        }}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+
+                            {paymentOption === 'paybill' && (
+                                <>
+                                    <motion.div className="mb-4" variants={itemVariants}>
+                                        <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="paybillNumber">
+                                            Paybill Number (Business Number)
+                                        </label>
+                                        <input
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                            id="paybillNumber"
+                                            type="text"
+                                            placeholder="Enter Paybill Number"
+                                            value={paybillNumber}
+                                            onChange={(e) => setPaybillNumber(e.target.value)}
+                                        />
+                                    </motion.div>
+
+                                    <motion.div className="mb-4" variants={itemVariants}>
+                                        <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="accountNumber">
+                                            Account Number
+                                        </label>
+                                        <input
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                            id="accountNumber"
+                                            type="text"
+                                            placeholder="Enter Account Number"
+                                            value={accountNumber}
+                                            onChange={(e) => setAccountNumber(e.target.value)}
+                                        />
+                                    </motion.div>
+                                </>
+                            )}
+
+                            {paymentOption === 'till' && (
+                                <motion.div className="mb-4" variants={itemVariants}>
+                                    <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="tillNumber">
+                                        Till Number
+                                    </label>
+                                    <input
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                        id="tillNumber"
+                                        type="text"
+                                        placeholder="Enter Till Number"
+                                        value={tillNumber}
+                                        onChange={(e) => setTillNumber(e.target.value)}
+                                    />
+                                </motion.div>
+                            )}
+
+                            <motion.div className="mb-6" variants={itemVariants}>
+                                <label className="block text-[#BCAFBD] text-sm font-medium mb-2" htmlFor="dueDate">
+                                    <span className="inline-block mr-2"><Calendar size={16} /></span>
+                                    Due Date
+                                </label>
+                                <input
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#E9ADBC] focus:border-transparent transition-all duration-200 outline-none"
+                                    id="dueDate"
+                                    type="date"
+                                    value={dueDate}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                />
+                            </motion.div>
+
+                            <motion.div className="flex items-center justify-between" variants={itemVariants}>
+                                <motion.button
+                                    className="w-full bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
+                                    type="submit"
+                                    variants={buttonVariants}
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                >
+                                    <span>Add Bill</span>
+                                    <ArrowRight className="ml-2" size={18} />
+                                </motion.button>
+                            </motion.div>
+                        </form>
+                    </div>
+                </motion.div>
+            </motion.div>
+        </div>
+    );
+};
+
+export default BillForm;
+================================================================================
+File: ./components/DashboardLayout.tsx
+================================================================================
+// app/src/components/DashboardLayout.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Home, Wallet, List, BarChart, Bell, Settings, LogOut } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activePage = searchParams.get('section') || 'overview';
+
+  const navigation = [
+    { name: 'Overview', href: '/?page=dashboard§ion=overview', icon: Home },
+    { name: 'Manage Bills', href: '/?page=dashboard§ion=manage-bills', icon: Wallet },
+    { name: 'Payment Options', href: '/?page=dashboard§ion=payment-options', icon: List },
+    { name: 'Payment History & Analytics', href: '/?page=dashboard§ion=payment-history', icon: BarChart },
+    { name: 'Notifications & Reminders', href: '/?page=dashboard§ion=notifications', icon: Bell },
+    { name: 'Settings', href: '/?page=dashboard§ion=settings', icon: Settings },
+  ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('isFirstTimeUser');
+    router.push('/?page=login');
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <motion.aside
+        className="w-64 bg-white shadow-md"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div className="p-4">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">BillEase</h1>
+          <nav>
+            {navigation.map((item) => (
+              <motion.a
+                key={item.name}
+                href={item.href}
+                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${item.href === `/?page=dashboard§ion=${activePage}` ? 'bg-gray-100 text-gray-900' : ''
+                  }`}
+                variants={itemVariants}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(item.href);
+                }}
+              >
+                <item.icon className="mr-2 h-5 w-5" />
+                {item.name}
+              </motion.a>
+            ))}
+            <motion.button
+              className="flex items-center py-2 px-4 rounded-md text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              onClick={handleLogout}
+              variants={itemVariants}
+            >
+              <LogOut className="mr-2 h-5 w-5" />
+              Logout
+            </motion.button>
+          </nav>
+        </div>
+      </motion.aside>
+
+      {/* Main Content */}
+      <div className="flex-1 p-4">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default DashboardLayout;
+================================================================================
+File: ./components/dashboard/PaymentHistory.tsx
+================================================================================
+// app/src/components/dashboard/PaymentHistory.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const PaymentHistory = () => {
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Payment History & Analytics</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Transaction History</h3>
+        <p>List of past payments (Date, Amount, Reference Number)...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Upcoming Payments</h3>
+        <p>Shows unpaid bills & due dates...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Spending Insights</h3>
+        <p>Monthly breakdown with graphs...</p>
+        <p>Total Paid This Month: Track spending trends...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default PaymentHistory;
+================================================================================
+File: ./components/dashboard/Notifications.tsx
+================================================================================
+// app/src/components/dashboard/Notifications.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const Notifications = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Notifications & Reminders</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">View Reminders</h3>
+        <p>See upcoming email reminders...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Resend Reminder</h3>
+        <p>If a user wants to get another reminder...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Unpaid Bill Alerts</h3>
+        <p>Notifications for overdue payments...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default Notifications;
+================================================================================
+File: ./components/dashboard/PaymentOptions.tsx
+================================================================================
+// app/src/components/dashboard/PaymentOptions.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const PaymentOptions = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Payment Options</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Pay Now</h3>
+        <p>Select a single bill and pay immediately...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Pay Multiple Bills</h3>
+        <p>Choose multiple bills and pay together...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Pay All Bills</h3>
+        <p>One Mpesa prompt for all unpaid bills...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Payment Status</h3>
+        <p>Shows if a bill is "Paid" or "Pending"...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default PaymentOptions;
+================================================================================
+File: ./components/dashboard/Overview.tsx
+================================================================================
+// app/src/components/dashboard/Overview.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const Overview = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Overview</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Upcoming Bills</h3>
+        <p>List of bills with due dates...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Total Due Amount</h3>
+        <p>Sum of all unpaid bills...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Recent Transactions</h3>
+        <p>Last few payments made...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Payment Reminder Status</h3>
+        <p>See if reminders have been sent...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default Overview;
+================================================================================
+File: ./components/dashboard/ManageBills.tsx
+================================================================================
+// app/src/components/dashboard/ManageBills.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const ManageBills = () => {
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Manage Bills</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Add New Bill</h3>
+        <p>Select bill type (Electricity, Rent, Water, WiFi, Trash)...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Edit Bill Details</h3>
+        <p>Update Paybill/Till Number, Account Number...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Set Due Dates</h3>
+        <p>Choose payment deadlines...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Delete Bill</h3>
+        <p>Remove a bill if no longer applicable...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default ManageBills;
+================================================================================
+File: ./components/dashboard/Settings.tsx
+================================================================================
+// app/src/components/dashboard/Settings.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+const Settings = () => {
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+      <motion.h2 className="text-2xl font-semibold mb-4" variants={itemVariants}>Settings</motion.h2>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Manage Profile</h3>
+        <p>Update email, password, and user details...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Manage Payment Methods</h3>
+        <p>Save frequently used Paybill/Till Numbers...</p>
+      </motion.div>
+      <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+        <h3 className="text-lg font-medium mb-2">Enable/Disable Notifications</h3>
+        <p>Customize email reminders...</p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default Settings;
+================================================================================
+File: ./app/layout.tsx
+================================================================================
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'Billing App',
+  description: 'A Next.js billing application with Flask backend.',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <div className="min-h-screen flex flex-col">
+          {/* Add a header/navigation here if needed */}
+          <main className="flex-grow">{children}</main>
+          {/* Add a footer here if needed */}
+        </div>
+      </body>
+    </html>
+  );
+}
+================================================================================
+File: ./app/page.tsx
+================================================================================
+// app/src/app/page.tsx
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import Auth from '@/components/Auth';
+import BillForm from '@/components/BillForm';
+import DashboardLayout from '@/components/DashboardLayout';
+import Overview from '@/components/dashboard/Overview';
+import ManageBills from '@/components/dashboard/ManageBills';
+import PaymentOptions from '@/components/dashboard/PaymentOptions';
+import PaymentHistory from '@/components/dashboard/PaymentHistory';
+import Notifications from '@/components/dashboard/Notifications';
+import Settings from '@/components/dashboard/Settings';
+import WelcomeScreen from '@/components/WelcomeScreen';
+import {useEffect, useState} from "react";
+
+export default function HomePage() {
+    const searchParams = useSearchParams();
+    const page = searchParams.get('page') || 'login';
+    const userId = searchParams.get('userId') || '';
+    const dashboardSection = searchParams.get('section') || 'overview'; // Default dashboard section
+    const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setIsFirstTimeUser(localStorage.getItem('isFirstTimeUser') === 'true');
+        }
+    }, []);
+
+    const renderDashboardSection = () => {
+        switch (dashboardSection) {
+            case 'overview':
+                return <Overview/>;
+            case 'manage-bills':
+                return <ManageBills/>;
+            case 'payment-options':
+                return <PaymentOptions/>;
+            case 'payment-history':
+                return <PaymentHistory/>;
+            case 'notifications':
+                return <Notifications/>;
+            case 'settings':
+                return <Settings/>;
+            default:
+                return <Overview/>; // Default to Overview
+        }
+    };
+
+    if (page === 'dashboard') {
+        if (isFirstTimeUser === true) {
+            return (
+                <DashboardLayout>
+                    {renderDashboardSection()}
+                </DashboardLayout>
+            );
+
+        } else {
+            return <BillForm userId={userId}/>;
+        }
+
+
+    } else if (page === 'billForm') {
+        return <BillForm userId={userId}/>;
+    } else if (page === 'welcome') {
+        return <WelcomeScreen/>;
+    }
+    else {
+        return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'}/>;
+    }
+}
+================================================================================
