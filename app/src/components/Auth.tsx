@@ -15,11 +15,12 @@ import {
   Heart,
   ArrowRight
 } from 'lucide-react';
+import WelcomeScreen from './WelcomeScreen';
 
 const API_BASE_URL = 'http://localhost:5000'; // Replace with your backend URL
 
 interface AuthProps {
-  initialRoute: 'login' | 'register' | 'billForm' | 'dashboard';
+  initialRoute: 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome';
 }
 
 const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
@@ -33,6 +34,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [userId, setUserId] = useState(''); // Store the user ID
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,6 +43,12 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     const accessToken = localStorage.getItem('accessToken');
     if (initialRoute === 'dashboard' && !accessToken) {
       router.push('/?page=login'); // Redirect to login if no token
+    }
+    // Check if user is logging in for the first time
+    if (localStorage.getItem('isFirstTimeUser') === 'true') {
+      setIsFirstTimeUser(true);
+    } else {
+      setIsFirstTimeUser(false);
     }
   }, [initialRoute, router]);
 
@@ -65,7 +73,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
       if (response.ok) {
         localStorage.setItem('accessToken', data.access_token);
-        router.push('/?page=billForm'); // Redirect to Bill Form
+        localStorage.setItem('isFirstTimeUser', 'true');
+        router.push('/?page=welcome'); // Redirect to welcome page
       } else {
         setError(data.message || 'Login failed.');
       }
@@ -104,7 +113,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         setError('');
         setUserId(data.user.id); // Save the user ID upon successful registration
         localStorage.setItem('accessToken', data.access_token);
-        router.push(`/?page=billForm&userId=${data.user.id}`); // Redirect to billForm
+        localStorage.setItem('isFirstTimeUser', 'true');
+        router.push(`/?page=welcome&userId=${data.user.id}`); // Redirect to Welcome page
       } else {
         // More detailed error handling
         if (data.errors) {
@@ -138,6 +148,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
       if (response.ok) {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('isFirstTimeUser');
         router.push('/?page=login');
       } else {
         console.error('Logout failed');
@@ -477,68 +488,79 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     </div>
   );
 
-  const renderDashboard = () => (
-    <div className="min-h-screen bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
-      <motion.div
-        className="container mx-auto px-4 py-16"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
-        <motion.div
-          className="max-w-4xl mx-auto bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
-          variants={itemVariants}
-        >
-          <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
-
-          <div className="px-8 py-12">
+  const renderDashboard = () => {
+    // Check if user is logging in for the first time
+    if (isFirstTimeUser) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-[#E2D7E3] via-[#BCAFBD] to-[#E9ADBC]">
+          <motion.div
+            className="container mx-auto px-4 py-16"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
             <motion.div
-              className="flex flex-col items-center mb-12"
+              className="max-w-4xl mx-auto bg-white backdrop-blur-lg bg-opacity-90 rounded-3xl shadow-2xl overflow-hidden"
               variants={itemVariants}
             >
-              <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-6 shadow-lg">
-                <Heart className="text-white" size={40} />
-              </div>
-              <h2 className="text-4xl font-bold text-gray-800 mb-2">Welcome to Your Dashboard</h2>
-              <p className="text-[#BCAFBD] text-center max-w-md">You've successfully logged in. This is your personal dashboard where you can manage your account.</p>
-            </motion.div>
+              <div className="h-3 bg-gradient-to-r from-[#E9ADBC] to-[#E17295]"></div>
 
-            <motion.div
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
-              variants={itemVariants}
-            >
-              {[1, 2, 3].map((item) => (
+              <div className="px-8 py-12">
                 <motion.div
-                  key={item}
-                  className="bg-gray-50 rounded-2xl p-6 shadow-md"
-                  whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                  className="flex flex-col items-center mb-12"
+                  variants={itemVariants}
                 >
-                  <h3 className="text-lg font-medium text-gray-800 mb-2">Dashboard Section {item}</h3>
-                  <p className="text-[#BCAFBD]">This is a placeholder for your dashboard content. Add your custom components here.</p>
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E9ADBC] to-[#E17295] mb-6 shadow-lg">
+                    <Heart className="text-white" size={40} />
+                  </div>
+                  <h2 className="text-4xl font-bold text-gray-800 mb-2">Welcome to Your Dashboard</h2>
+                  <p className="text-[#BCAFBD] text-center max-w-md">You've successfully logged in. This is your personal dashboard where you can manage your account.</p>
                 </motion.div>
-              ))}
-            </motion.div>
 
-            <motion.div
-              className="flex justify-center"
-              variants={itemVariants}
-            >
-              <motion.button
-                onClick={handleLogout}
-                className="bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-8 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <span>Sign Out</span>
-                <LogOut className="ml-2" size={18} />
-              </motion.button>
+                <motion.div
+                  className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+                  variants={itemVariants}
+                >
+                  {[1, 2, 3].map((item) => (
+                    <motion.div
+                      key={item}
+                      className="bg-gray-50 rounded-2xl p-6 shadow-md"
+                      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                    >
+                      <h3 className="text-lg font-medium text-gray-800 mb-2">Dashboard Section {item}</h3>
+                      <p className="text-[#BCAFBD]">This is a placeholder for your dashboard content. Add your custom components here.</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+
+                <motion.div
+                  className="flex justify-center"
+                  variants={itemVariants}
+                >
+                  <motion.button
+                    onClick={handleLogout}
+                    className="bg-gradient-to-r from-[#E9ADBC] to-[#E17295] text-white font-medium py-3 px-8 rounded-xl flex items-center justify-center shadow-lg shadow-pink-200/50 hover:shadow-pink-300/50 transition-all duration-300"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <span>Sign Out</span>
+                    <LogOut className="ml-2" size={18} />
+                  </motion.button>
+                </motion.div>
+              </div>
             </motion.div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </div>
+          </motion.div>
+        </div>
+      );
+    } else {
+      router.push('/?page=billForm');
+    }
+  };
+
+  const renderWelcomeScreen = () => (
+    <WelcomeScreen />
   );
 
   let content;
@@ -551,6 +573,9 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       break;
     case 'dashboard':
       content = renderDashboard();
+      break;
+    case 'welcome':
+      content = renderWelcomeScreen();
       break;
     default:
       content = renderLoginForm(); // Default to login

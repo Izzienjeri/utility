@@ -1,3 +1,5 @@
+# server/models.py
+
 import uuid
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -6,10 +8,10 @@ from datetime import datetime
 from marshmallow import fields, validate
 
 
-
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 ma = Marshmallow()
+
 
 def generate_uuid():
     """Generate a UUID for primary keys"""
@@ -18,7 +20,7 @@ def generate_uuid():
 
 class User(db.Model):
     __tablename__ = "users"
-    
+
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -31,7 +33,7 @@ class User(db.Model):
         self.full_name = full_name
         self.email = email
         self.phone = phone
-        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
@@ -42,12 +44,14 @@ class Bill(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    bill_type = db.Column(db.String(50), nullable=False)  
+    bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)  
-    account_number = db.Column(db.String(50), nullable=False)
+    payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
+    paybill_number = db.Column(db.String(50), nullable=True)  # Business Number
+    till_number = db.Column(db.String(50), nullable=True)  # Till Number
+    account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default="Pending")  
+    status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="bills")
@@ -61,7 +65,7 @@ class Payment(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     amount_paid = db.Column(db.Float, nullable=False)
     payment_reference = db.Column(db.String(100), unique=True, nullable=False)
-    status = db.Column(db.String(20), default="Completed")  
+    status = db.Column(db.String(20), default="Completed")
     paid_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bill = db.relationship("Bill", backref="payments")
@@ -72,9 +76,8 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
         load_instance = True
-        exclude = ("password_hash",)  
-    
-    
+        exclude = ("password_hash",)
+
     full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
     email = fields.Email(required=True)
     phone = fields.String(required=True, validate=validate.Length(min=10, max=15))

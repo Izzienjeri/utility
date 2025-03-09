@@ -2,7 +2,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
-from flask_cors import CORS  
+from flask_cors import CORS  # Import CORS
 from celery import Celery
 from config import Config
 from models import db, bcrypt
@@ -30,14 +30,15 @@ db.init_app(app)
 bcrypt.init_app(app)
 jwt = JWTManager(app)
 mail = Mail(app)
-CORS(app, resources={r"/auth/*": {"origins": "*"}}, supports_credentials=True) 
-ma = Marshmallow(app)  
+
+CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+ma = Marshmallow(app)
 
 
 celery = make_celery(app)
 
 
-migrate = Migrate(app, db)  
+migrate = Migrate(app, db)
 
 
 app.register_blueprint(auth_blueprint, url_prefix="/auth")

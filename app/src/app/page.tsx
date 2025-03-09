@@ -12,7 +12,7 @@ export default function HomePage() {
 
   return (
     <>
-      {page === 'billForm' ? <BillForm userId={userId} /> : <Auth initialRoute={page as 'login' | 'register' | 'dashboard' | 'billForm'} />}
+      {page === 'billForm' ? <BillForm userId={userId} /> : <Auth initialRoute={page as 'login' | 'register' | 'dashboard' | 'billForm' | 'welcome'} />}
     </>
   );
 }
