@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";  // Import useRouter
 import {
   Calendar,
   Wallet,
@@ -34,18 +35,22 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
+  const router = useRouter(); // Initialize useRouter
+
 
   const billTypes = [
     {
       value: "Electricity",
       icon: <Lightbulb className="inline-block mr-1" size={14} />,
     },
-    { value: "Rent", icon: <Home className="inline-block mr-1" size={14} /> },
+    { value: "Rent", icon: <Home className="inline-block mr-1" size={14} />,
+    },
     {
       value: "Water",
       icon: <Droplet className="inline-block mr-1" size={14} />,
     },
-    { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={14} /> },
+    { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={14} />,
+    },
     {
       value: "Trash",
       icon: <Trash2 className="inline-block mr-1" size={14} />,
@@ -79,7 +84,14 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     };
 
     getToken();
-  }, []);
+
+    // NEW CODE: Check for isFirstTimeUser and redirect if necessary
+    const isFirstTimeUser = localStorage.getItem('isFirstTimeUser');
+    if (!isFirstTimeUser) {
+        router.push('/?page=dashboard§ion=overview');
+    }
+  }, [router]); // Add router to the dependency array
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +151,10 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         setTillNumber("");
         setAccountNumber("");
         setDueDate("");
+
+        // NEW CODE: Remove isFirstTimeUser and redirect to dashboard
+        localStorage.removeItem('isFirstTimeUser');
+        router.push('/?page=dashboard§ion=overview');
       } else {
         setError(data.message || "Failed to add bill.");
         setSuccessMessage("");

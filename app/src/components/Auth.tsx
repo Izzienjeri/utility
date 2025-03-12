@@ -63,7 +63,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
 
         if (isNewUser) {
-          router.push("/?page=billForm");
+          router.push("/?page=welcome"); // Redirect to welcome
         } else {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
@@ -105,11 +105,13 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         localStorage.setItem("accessToken", accessToken);
         console.log("accessToken after register:", accessToken); // Debugging
 
+        // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
         setSuccessMessage(data.message || "Registration successful!");
         setError("");
-        router.push("/?page=billForm");
+        router.push("/?page=welcome"); // Redirect to welcome first
+        // END NEW CODE
       } else {
         if (data.errors) {
           const errorMessages = Object.entries(data.errors)

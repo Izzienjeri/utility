@@ -35,6 +35,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
   const router = useRouter();
 
+  // components/Auth.tsx
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -66,7 +67,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         if (isNewUser) {
           router.push("/?page=billForm");
         } else {
-          router.push("/?page=dashboard§ion=overview");
+          router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
       } else {
         setError(data.message || "Login failed.");
@@ -106,11 +107,13 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         localStorage.setItem("accessToken", accessToken);
         console.log("accessToken after register:", accessToken); // Debugging
 
+        // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
         setSuccessMessage(data.message || "Registration successful!");
         setError("");
-        router.push("/?page=billForm");
+        router.push("/?page=billForm"); // Redirect to bill form immediately
+        // END NEW CODE
       } else {
         if (data.errors) {
           const errorMessages = Object.entries(data.errors)
@@ -508,7 +511,6 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 };
 
 export default Auth;
-
 ================================================================================
 File: ./components/WelcomeScreen.tsx
 ================================================================================
@@ -610,6 +612,7 @@ File: ./components/BillForm.tsx
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";  // Import useRouter
 import {
   Calendar,
   Wallet,
@@ -641,6 +644,8 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
+  const router = useRouter(); // Initialize useRouter
+
 
   const billTypes = [
     {
@@ -686,7 +691,14 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     };
 
     getToken();
-  }, []);
+
+    // NEW CODE: Check for isFirstTimeUser and redirect if necessary
+    const isFirstTimeUser = localStorage.getItem('isFirstTimeUser');
+    if (!isFirstTimeUser) {
+        router.push('/?page=dashboard&ion=overview');
+    }
+  }, [router]); // Add router to the dependency array
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -746,6 +758,10 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         setTillNumber("");
         setAccountNumber("");
         setDueDate("");
+
+        // NEW CODE: Remove isFirstTimeUser and redirect to dashboard
+        localStorage.removeItem('isFirstTimeUser');
+        router.push('/?page=dashboard&ion=overview');
       } else {
         setError(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -1550,7 +1566,7 @@ export default function RootLayout({
 ================================================================================
 File: ./app/page.tsx
 ================================================================================
-// app/src/app/page.tsx
+// app/page.tsx
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -1573,12 +1589,14 @@ export default function HomePage() {
     const userId = searchParams.get('userId') || '';
     const dashboardSection = searchParams.get('section') || 'overview';
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
+    const [isLoading, setIsLoading] = useState(true); // Add a loading state
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const storedValue = localStorage.getItem('isFirstTimeUser');
             setIsFirstTimeUser(storedValue === 'true');
         }
+        setIsLoading(false); // Set loading to false after attempting to retrieve the value
     }, []);
 
     const renderDashboardSection = () => {
@@ -1600,16 +1618,16 @@ export default function HomePage() {
         }
     };
 
+    if (isLoading) {
+        return <div>Loading...</div>; // Show a loading indicator while checking localStorage
+    }
+
     if (page === 'dashboard') {
-        if (isFirstTimeUser === null) {
-            return <div>Loading...</div>;
-        } else {
-            return (
-                <DashboardLayout>
-                    {renderDashboardSection()}
-                </DashboardLayout>
-            );
-        }
+        return (
+            <DashboardLayout>
+                {renderDashboardSection()}
+            </DashboardLayout>
+        );
     } else if (page === 'billForm') {
         return <BillForm userId={userId} />;
     } else if (page === 'welcome') {

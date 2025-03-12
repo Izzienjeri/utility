@@ -12,19 +12,15 @@ class Register(Resource):
     def post(self):
         data = request.get_json()
 
-
         errors = user_schema.validate(data)
         if errors:
             return {"message": "Validation error", "errors": errors}, 400
 
-
         if User.query.filter_by(email=data["email"]).first():
             return {"message": "Email already exists"}, 400
 
-
         if User.query.filter_by(phone=data["phone"]).first():
             return {"message": "Phone number already exists"}, 400
-
 
         new_user = User(
             full_name=data["full_name"],
@@ -37,8 +33,8 @@ class Register(Resource):
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.id, expires_delta=datetime.timedelta(days=1))
-        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user), "access_token": access_token})
-
+        #ADD is_new_user=True here, for initial redirect
+        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user), "access_token": access_token, "is_new_user": True})
 
 class Login(Resource):
     def post(self):
@@ -51,7 +47,6 @@ class Login(Resource):
             return {"message": "Invalid credentials"}, 401
 
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
-
         #ADD THIS LINE:
         return jsonify({"access_token": access_token, "is_new_user": False}) #  Return new user status
 

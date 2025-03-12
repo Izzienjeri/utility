@@ -94,6 +94,7 @@ class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Payment
         load_instance = True
+        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT 
 
 
 user_schema = UserSchema()
