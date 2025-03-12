@@ -1,3 +1,4 @@
+# routes/auth_routes.py
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, User, user_schema
@@ -50,8 +51,9 @@ class Login(Resource):
             return {"message": "Invalid credentials"}, 401
 
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
-        return jsonify({"access_token": access_token})
 
+        #ADD THIS LINE:
+        return jsonify({"access_token": access_token, "is_new_user": False}) #  Return new user status
 
 class Logout(Resource):
     @jwt_required()

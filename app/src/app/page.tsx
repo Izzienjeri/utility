@@ -1,4 +1,4 @@
-// app/src/app/page.tsx
+// app/page.tsx
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -21,48 +21,50 @@ export default function HomePage() {
     const userId = searchParams.get('userId') || '';
     const dashboardSection = searchParams.get('section') || 'overview';
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
+    const [isLoading, setIsLoading] = useState(true); // Add a loading state
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const storedValue = localStorage.getItem('isFirstTimeUser');
             setIsFirstTimeUser(storedValue === 'true');
         }
+        setIsLoading(false); // Set loading to false after attempting to retrieve the value
     }, []);
 
     const renderDashboardSection = () => {
         switch (dashboardSection) {
             case 'overview':
-                return <Overview/>;
+                return <Overview />;
             case 'manage-bills':
-                return <ManageBills/>;
+                return <ManageBills />;
             case 'payment-options':
-                return <PaymentOptions/>;
+                return <PaymentOptions />;
             case 'payment-history':
-                return <PaymentHistory/>;
+                return <PaymentHistory />;
             case 'notifications':
-                return <Notifications/>;
+                return <Notifications />;
             case 'settings':
-                return <Settings/>;
+                return <Settings />;
             default:
-                return <Overview/>;
+                return <Overview />;
         }
     };
 
+    if (isLoading) {
+        return <div>Loading...</div>; // Show a loading indicator while checking localStorage
+    }
+
     if (page === 'dashboard') {
-        if (isFirstTimeUser === null) {
-            return <div>Loading...</div>;
-        } else {
-            return (
-                <DashboardLayout>
-                    {renderDashboardSection()}
-                </DashboardLayout>
-            );
-        }
+        return (
+            <DashboardLayout>
+                {renderDashboardSection()}
+            </DashboardLayout>
+        );
     } else if (page === 'billForm') {
-        return <BillForm userId={userId}/>;
+        return <BillForm userId={userId} />;
     } else if (page === 'welcome') {
-        return <WelcomeScreen/>;
+        return <WelcomeScreen />;
     } else {
-        return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'}/>;
+        return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'} />;
     }
 }

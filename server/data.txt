@@ -332,33 +332,35 @@ api = Api(auth_blueprint)
 class Register(Resource):
     def post(self):
         data = request.get_json()
-        
-        
+
+
         errors = user_schema.validate(data)
         if errors:
             return {"message": "Validation error", "errors": errors}, 400
-        
-        
+
+
         if User.query.filter_by(email=data["email"]).first():
             return {"message": "Email already exists"}, 400
-        
-        
+
+
         if User.query.filter_by(phone=data["phone"]).first():
             return {"message": "Phone number already exists"}, 400
-        
-        
+
+
         new_user = User(
             full_name=data["full_name"],
             email=data["email"],
             phone=data["phone"],
-            password=data["password"]  
+            password=data["password"]
         )
 
         db.session.add(new_user)
         db.session.commit()
 
-        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user)})
-    
+        access_token = create_access_token(identity=new_user.id, expires_delta=datetime.timedelta(days=1))
+        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user), "access_token": access_token})
+
+
 class Login(Resource):
     def post(self):
         data = request.get_json()
@@ -368,9 +370,10 @@ class Login(Resource):
         user = User.query.filter_by(email=email).first()
         if not user or not user.check_password(password):
             return {"message": "Invalid credentials"}, 401
-        
+
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
         return jsonify({"access_token": access_token})
+
 
 class Logout(Resource):
     @jwt_required()
@@ -382,9 +385,6 @@ class Logout(Resource):
 api.add_resource(Register, "/register")
 api.add_resource(Login, "/login")
 api.add_resource(Logout, "/logout")
-
-
-
 
 
 ========================================
