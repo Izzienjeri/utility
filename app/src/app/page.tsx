@@ -1,7 +1,7 @@
 // app/src/app/page.tsx
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Auth from '@/components/Auth';
 import BillForm from '@/components/BillForm';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -12,18 +12,20 @@ import PaymentHistory from '@/components/dashboard/PaymentHistory';
 import Notifications from '@/components/dashboard/Notifications';
 import Settings from '@/components/dashboard/Settings';
 import WelcomeScreen from '@/components/WelcomeScreen';
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const page = searchParams.get('page') || 'login';
     const userId = searchParams.get('userId') || '';
-    const dashboardSection = searchParams.get('section') || 'overview'; // Default dashboard section
+    const dashboardSection = searchParams.get('section') || 'overview';
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            setIsFirstTimeUser(localStorage.getItem('isFirstTimeUser') === 'true');
+            const storedValue = localStorage.getItem('isFirstTimeUser');
+            setIsFirstTimeUser(storedValue === 'true');
         }
     }, []);
 
@@ -42,29 +44,25 @@ export default function HomePage() {
             case 'settings':
                 return <Settings/>;
             default:
-                return <Overview/>; // Default to Overview
+                return <Overview/>;
         }
     };
 
     if (page === 'dashboard') {
-        if (isFirstTimeUser === true) {
+        if (isFirstTimeUser === null) {
+            return <div>Loading...</div>;
+        } else {
             return (
                 <DashboardLayout>
                     {renderDashboardSection()}
                 </DashboardLayout>
             );
-
-        } else {
-            return <BillForm userId={userId}/>;
         }
-
-
     } else if (page === 'billForm') {
         return <BillForm userId={userId}/>;
     } else if (page === 'welcome') {
         return <WelcomeScreen/>;
-    }
-    else {
+    } else {
         return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'}/>;
     }
 }
