@@ -1,8 +1,13 @@
-# server/routes/bill_routes.py
+# routes/bill_routes.py
+
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, Bill, bill_schema, bills_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import logging  # Import the logging module
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)  # Set the logging level to DEBUG
 
 bill_blueprint = Blueprint("bills", __name__)
 api = Api(bill_blueprint)
@@ -13,9 +18,11 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
     def post(self):
         data = request.get_json()
         user_id = get_jwt_identity()
+        logging.debug(f"Received bill data: {data}")
 
         errors = bill_schema.validate(data)
         if errors:
+            logging.debug(f"Validation errors: {errors}")  # Log the errors
             return {"errors": errors}, 400
 
         # Validation: Check if only one of till_number or paybill_number is provided
@@ -40,17 +47,20 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
         else:
             return {"message": "Invalid payment option"}, 400
 
-        new_bill = Bill(
-            user_id=user_id,
-            bill_type=data["bill_type"],
-            amount=data["amount"],
-            payment_option=payment_option,
-            paybill_number=paybill_number,
-            till_number=till_number,
-            account_number=account_number,
-            due_date=data["due_date"],
-            status="Pending",
-        )
+        new_bill = Bill()  # Create an empty Bill object
+        new_bill.user_id = user_id
+        new_bill.bill_type = data["bill_type"]
+        new_bill.amount = data["amount"]
+        new_bill.payment_option = payment_option
+        new_bill.due_date = data["due_date"]
+        new_bill.status = "Pending"  # Default Status
+
+        # Conditionally add paybill or till number
+        if payment_option == "paybill":
+            new_bill.paybill_number = paybill_number
+            new_bill.account_number = account_number
+        elif payment_option == "till":
+            new_bill.till_number = till_number
 
         db.session.add(new_bill)
         db.session.commit()
@@ -61,7 +71,6 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
         user_id = get_jwt_identity()
         bills = Bill.query.filter_by(user_id=user_id).all()
         return jsonify(bills_schema.dump(bills))
-
 
 class BillResource(Resource):  # Handles the /<string:bill_id> endpoint (single bill)
     @jwt_required()
@@ -129,7 +138,6 @@ class BillResource(Resource):  # Handles the /<string:bill_id> endpoint (single 
 
       db.session.commit()
       return jsonify({"message": "Bill updated successfully", "bill": bill_schema.dump(bill)})
-
 
 api.add_resource(BillListResource, "/") #route to get multiple bills
 api.add_resource(BillResource, "/<string:bill_id>") #route to get a single bill with edits, deletes and gets

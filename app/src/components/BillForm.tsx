@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Wallet,
@@ -36,7 +36,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const [isEditMode, setIsEditMode] = useState(false);
 
   const billTypes = [
@@ -74,13 +74,13 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         } else {
           console.warn("No access token found in localStorage.");
           setError("Authentication required. Please login.");
+          router.push("/?page=login"); // Redirect to login
           return;
         }
         setIsLoadingToken(false);
 
         if (editBillId) {
-          setIsEditMode(true); // Set to edit mode
-          // Fetch the bill data for editing
+          setIsEditMode(true);
           try {
             const response = await fetch(
               `${API_BASE_URL}/bills/${editBillId}`,
@@ -122,12 +122,11 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
 
     getToken();
 
-    // NEW CODE: Check for isFirstTimeUser and redirect if necessary
     const isFirstTimeUser = localStorage.getItem("isFirstTimeUser");
     if (!isFirstTimeUser && !editBillId) {
       router.push("/?page=dashboard&ion=overview");
     }
-  }, [router, editBillId]); // Add router to the dependency array
+  }, [router, editBillId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,14 +146,17 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       return;
     }
 
-    if (paymentOption === "paybill" && (!paybillNumber || !accountNumber)) {
-      setError("Paybill requires both Paybill Number and Account Number.");
-      return;
-    }
-
-    if (paymentOption === "till" && !tillNumber) {
-      setError("Till Number is required for Till payment.");
-      return;
+    // Validate based on payment option
+    if (paymentOption === "paybill") {
+      if (!paybillNumber || !accountNumber) {
+        setError("Paybill requires both Paybill Number and Account Number.");
+        return;
+      }
+    } else if (paymentOption === "till") {
+      if (!tillNumber) {
+        setError("Till Number is required for Till payment.");
+        return;
+      }
     }
 
     try {
@@ -163,21 +165,28 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         : `${API_BASE_URL}/bills/`;
       const method = editBillId ? "PUT" : "POST";
 
+      // Construct the request body.  Only include the relevant payment details.
+      const requestBody: any = {
+        bill_type: billType,
+        amount: amount,
+        payment_option: paymentOption,
+        due_date: dueDate,
+      };
+
+      if (paymentOption === "paybill") {
+        requestBody.paybill_number = paybillNumber;
+        requestBody.account_number = accountNumber;
+      } else if (paymentOption === "till") {
+        requestBody.till_number = tillNumber;
+      }
+
       const response = await fetch(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`, // ***VERY IMPORTANT***
+          Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          bill_type: billType,
-          amount: amount,
-          payment_option: paymentOption,
-          paybill_number: paybillNumber,
-          till_number: tillNumber,
-          account_number: accountNumber,
-          due_date: dueDate,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -195,7 +204,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         setAccountNumber("");
         setDueDate("");
 
-        // NEW CODE: Remove isFirstTimeUser and redirect to dashboard
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
       } else {
@@ -453,7 +461,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                         value={accountNumber}
                         onChange={(e) => setAccountNumber(e.target.value)}
                       />
-                    </motion.div>{" "}
+                    </motion.div>
                   </>
                 )}
 

@@ -48,12 +48,14 @@ class Bill(db.Model):
     amount = db.Column(db.Float, nullable=False)
     payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
     till_number = db.Column(db.String(50), nullable=True)  # Till Number
+    paybill_number = db.Column(db.String(50), nullable=True) #Paybill Number
     account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="bills")
+
 
 
 class Payment(db.Model):

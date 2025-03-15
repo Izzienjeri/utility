@@ -52,7 +52,6 @@ class Bill(db.Model):
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    paybill_number = db.Column(db.String(50), nullable=True)  # Business Number
     till_number = db.Column(db.String(50), nullable=True)  # Till Number
     account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)
@@ -60,6 +59,7 @@ class Bill(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="bills")
+
 
 
 class Payment(db.Model):
@@ -120,16 +120,25 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+
     MAIL_SERVER = os.getenv('MAIL_SERVER')
     MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
     MAIL_USE_TLS = True
     MAIL_USE_SSL = False
 
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+    # M-PESA Credentials
+    MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
+    MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
+    MPESA_BUSINESS_SHORTCODE = os.getenv('MPESA_BUSINESS_SHORTCODE')  # Paybill 174379 (Test)
+    MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
+    MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')  # STK Passkey
 
 
 
@@ -393,7 +402,7 @@ routes/payment_routes.py
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, Payment, Bill, payment_schema, payments_schema  # Import payments_schema
+from models import db, Payment, Bill, User, payment_schema, payments_schema  # Import payments_schema and User
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
 
@@ -411,23 +420,28 @@ class PaymentResource(Resource):
         if not bill:
             return {"message": "Bill not found"}, 404
 
-        response = initiate_mpesa_payment(bill.amount, bill.payment_method)
+        user = User.query.get(user_id)  # Get the user object to access phone number
+        if not user:
+            return {"message": "User not found"}, 404
+
+        phone_number = user.phone  # Get the user's phone number
+
+        response = initiate_mpesa_payment(bill.amount, phone_number)
         if response.get("status") == "success":
             new_payment = Payment(
                 user_id=user_id,
                 bill_id=bill_id,
                 amount_paid=bill.amount,
-                payment_reference=response.get("transaction_id"),
-                status="Completed"
+                payment_reference=response.get("CheckoutRequestID"), #Use CheckoutRequestID here
+                status="Pending"  # Set status to "Pending" initially
             )
             db.session.add(new_payment)
             db.session.commit()
 
-            bill.status = "Paid"
-            db.session.commit()
+            #Bill status does not change on payment, it is updated in the callback
 
-            return jsonify({"message": "Payment successful", "transaction_id": response.get("transaction_id")})
-        return {"message": "Payment failed"}, 400
+            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")}) #return checkout request ID
+        return {"message": "Payment failed", "error": response.get("message")}, 400
 
 
 class PaymentHistoryResource(Resource):  # NEW RESOURCE
@@ -438,19 +452,69 @@ class PaymentHistoryResource(Resource):  # NEW RESOURCE
 
         return jsonify(payments_schema.dump(payments)) #Use payments_schema to handle multiple payments
 
+# NEW CALLBACK ROUTE
+class MpesaCallbackResource(Resource):
+    def post(self):
+        """
+        Handles the callback from M-Pesa after a transaction.
+        """
+        callback_data = request.get_json()
+        print("M-Pesa Callback Data:", callback_data)  # Log the callback data
+
+        # Extract relevant information from the callback
+        try:
+            checkout_request_id = callback_data['Body']['stkCallback']['CheckoutRequestID']
+            result_code = callback_data['Body']['stkCallback']['ResultCode']
+            result_desc = callback_data['Body']['stkCallback']['ResultDesc']
+
+            # Find the payment by CheckoutRequestID
+            payment = Payment.query.filter_by(payment_reference=checkout_request_id).first()
+
+            if not payment:
+                print(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
+                return {"message": "Payment not found"}, 404
+
+            if result_code == 0:
+                # Payment was successful
+                payment.status = "Completed"
+
+                #Update the bill
+                bill = Bill.query.filter_by(id=payment.bill_id).first()
+                bill.status = "Paid"
+
+
+                db.session.commit()
+                return {"message": "Payment successful"}, 200
+            else:
+                # Payment failed or was cancelled
+                payment.status = "Failed"
+                db.session.commit()
+                print(f"Payment failed: {result_desc}")
+                return {"message": f"Payment failed: {result_desc}"}, 400
+
+        except (KeyError, TypeError) as e:
+            print(f"Error processing M-Pesa callback: {e}")
+            return {"message": "Invalid callback data"}, 400
+
 api.add_resource(PaymentResource, "/pay")
 api.add_resource(PaymentHistoryResource, "/history")  # NEW ROUTE
+api.add_resource(MpesaCallbackResource, "/callback") #This is the callback URL
 
 
 ========================================
 routes/bill_routes.py
 ========================================
 
-# server/routes/bill_routes.py
+# routes/bill_routes.py
+
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, Bill, bill_schema, bills_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import logging  # Import the logging module
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)  # Set the logging level to DEBUG
 
 bill_blueprint = Blueprint("bills", __name__)
 api = Api(bill_blueprint)
@@ -461,9 +525,11 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
     def post(self):
         data = request.get_json()
         user_id = get_jwt_identity()
+        logging.debug(f"Received bill data: {data}")
 
         errors = bill_schema.validate(data)
         if errors:
+            logging.debug(f"Validation errors: {errors}")  # Log the errors
             return {"errors": errors}, 400
 
         # Validation: Check if only one of till_number or paybill_number is provided
@@ -488,17 +554,20 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
         else:
             return {"message": "Invalid payment option"}, 400
 
-        new_bill = Bill(
-            user_id=user_id,
-            bill_type=data["bill_type"],
-            amount=data["amount"],
-            payment_option=payment_option,
-            paybill_number=paybill_number,
-            till_number=till_number,
-            account_number=account_number,
-            due_date=data["due_date"],
-            status="Pending",
-        )
+        new_bill = Bill()  # Create an empty Bill object
+        new_bill.user_id = user_id
+        new_bill.bill_type = data["bill_type"]
+        new_bill.amount = data["amount"]
+        new_bill.payment_option = payment_option
+        new_bill.due_date = data["due_date"]
+        new_bill.status = "Pending"  # Default Status
+
+        # Conditionally add paybill or till number
+        if payment_option == "paybill":
+            new_bill.paybill_number = paybill_number
+            new_bill.account_number = account_number
+        elif payment_option == "till":
+            new_bill.till_number = till_number
 
         db.session.add(new_bill)
         db.session.commit()
@@ -509,7 +578,6 @@ class BillListResource(Resource):  # Handles the / endpoint (list of bills)
         user_id = get_jwt_identity()
         bills = Bill.query.filter_by(user_id=user_id).all()
         return jsonify(bills_schema.dump(bills))
-
 
 class BillResource(Resource):  # Handles the /<string:bill_id> endpoint (single bill)
     @jwt_required()
@@ -578,7 +646,6 @@ class BillResource(Resource):  # Handles the /<string:bill_id> endpoint (single 
       db.session.commit()
       return jsonify({"message": "Bill updated successfully", "bill": bill_schema.dump(bill)})
 
-
 api.add_resource(BillListResource, "/") #route to get multiple bills
 api.add_resource(BillResource, "/<string:bill_id>") #route to get a single bill with edits, deletes and gets
 
@@ -587,24 +654,83 @@ api.add_resource(BillResource, "/<string:bill_id>") #route to get a single bill 
 utils/mpesa.py
 ========================================
 
+# utils/mpesa.py
 import requests
 import os
+import base64
+from datetime import datetime
 
-def initiate_mpesa_payment(amount, paybill):
+def get_mpesa_access_token():
+    """
+    Retrieves a fresh access token from the M-Pesa API.
+    """
+    consumer_key = os.getenv("MPESA_CONSUMER_KEY")
+    consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
+
+    api_URL = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+
+    # Safaricom expects the credentials to be base64 encoded
+    encoded_string = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode('utf-8')).decode('utf-8')
+
+    headers = {"Authorization": f"Basic {encoded_string}"}
+
+    try:
+        r = requests.get(api_URL, headers=headers)
+        r.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        json_response = r.json()
+        print("M-Pesa API Response:", json_response)  # Debugging
+        return json_response.get("access_token")
+    except requests.exceptions.RequestException as e:
+        print(f"M-Pesa Access Token Error: {e}")
+        return None
+
+
+def initiate_mpesa_payment(amount, phone_number): #Removed paybill, added phone_number
+    """
+    Initiates an STK Push payment request to M-Pesa.
+    """
+    access_token = get_mpesa_access_token()
+    if not access_token:
+        return {"status": "failed", "message": "Failed to obtain M-Pesa access token."}
+
     mpesa_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE")
+    passkey = os.getenv("MPESA_PASSKEY")
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    # Generate password
+    password = base64.b64encode(str(business_shortcode + passkey + timestamp).encode()).decode()
+
     headers = {
-        "Authorization": f"Bearer {os.getenv('MPESA_ACCESS_TOKEN')}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
+
     payload = {
-        "BusinessShortCode": paybill,
-        "Amount": amount,
-        "PartyA": os.getenv("MPESA_PHONE_NUMBER"),
-        "PartyB": paybill,
-        "PhoneNumber": os.getenv("MPESA_PHONE_NUMBER"),
-        "CallBackURL": os.getenv("MPESA_CALLBACK_URL"),
-        "TransactionDesc": "Utility Bill Payment"
+        "BusinessShortCode": business_shortcode,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline", #or CustomerBuyGoodsOnline for Till
+        "Amount": int(amount), #Amount must be an integer
+        "PartyA": phone_number,  # Customer phone number
+        "PartyB": business_shortcode,  # Your paybill number
+        "PhoneNumber": phone_number, # Customer phone number
+        "CallBackURL": os.getenv("MPESA_CALLBACK_URL"), # Your callback URL
+        "AccountReference": "Bill Payment",
+        "TransactionDesc": "Payment of Utility Bill"
     }
-    response = requests.post(mpesa_url, json=payload, headers=headers)
-    return response.json()
+
+    try:
+        response = requests.post(mpesa_url, json=payload, headers=headers)
+        response.raise_for_status()  # Raise HTTPError for bad responses
+        json_response = response.json()
+        print("M-Pesa STK Push Response:", json_response)  # Debugging
+        if json_response.get("ResponseCode") == "0":
+           return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage")}
+        else:
+            return {"status": "failed", "message": json_response.get("ResponseDescription")}
+
+    except requests.exceptions.RequestException as e:
+        print(f"M-Pesa STK Push Error: {e}")
+        return {"status": "failed", "message": str(e)}
 
