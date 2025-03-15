@@ -18,7 +18,7 @@ export default function HomePage() {
     const router = useRouter();
     const page = searchParams.get('page') || 'login';
     const userId = searchParams.get('userId') || '';
-    const dashboardSection = searchParams.get('section') || 'overview';
+    const dashboardSection = searchParams.get('ion') || 'overview'; // Corrected name
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Add a loading state
     const editBillId = searchParams.get('edit');
@@ -55,7 +55,7 @@ export default function HomePage() {
 
     if (page === 'dashboard') {
         return (
-            <DashboardLayout>
+            <DashboardLayout key={dashboardSection}> {/* Key Prop Here! */}
                 {renderDashboardSection()}
                 {checkoutRequestID && (
                     <div>

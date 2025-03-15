@@ -20,7 +20,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const activePage = searchParams.get("section") || "overview";
+    const activePage = searchParams.get("ion") || "overview";  // Use 'ion' here
 
     const navigation = [
         { name: "Overview", href: "/?page=dashboard&ion=overview", icon: Home },
@@ -90,7 +90,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                             <motion.a
                                 key={item.name}
                                 href={item.href}
-                                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50 ${item.href === `/?page=dashboard§ion=${activePage}` ? "bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white" : ""
+                                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50 ${item.name.toLowerCase().replace(/ /g, '-') === activePage ? "bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white" : ""
                                     }`}
                                 variants={itemVariants}
                                 onClick={(e) => {
@@ -101,7 +101,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                 <item.icon
                                     className="mr-2 h-5 w-5"
                                     style={{
-                                        color: item.href === `/?page=dashboard§ion=${activePage}`
+                                        color: item.name.toLowerCase().replace(/ /g, '-') === activePage
                                             ? "white"
                                             : undefined,
                                     }}
