@@ -23,28 +23,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const activePage = searchParams.get("section") || "overview";
 
     const navigation = [
-        { name: "Overview", href: "/?page=dashboard§ion=overview", icon: Home },
+        { name: "Overview", href: "/?page=dashboard&ion=overview", icon: Home },
         {
             name: "Manage Bills",
-            href: "/?page=dashboard§ion=manage-bills",
+            href: "/?page=dashboard&ion=manage-bills",
             icon: Wallet,
         },
         {
-            name: "Payment Options",
-            href: "/?page=dashboard§ion=payment-options",
-            icon: List,
-        },
-        {
             name: "Payment History & Analytics",
-            href: "/?page=dashboard§ion=payment-history",
+            href: "/?page=dashboard&ion=payment-history",
             icon: BarChart,
         },
         {
             name: "Notifications & Reminders",
-            href: "/?page=dashboard§ion=notifications",
+            href: "/?page=dashboard&ion=notifications",
             icon: Bell,
         },
-        { name: "Settings", href: "/?page=dashboard§ion=settings", icon: Settings },
+        { name: "Settings", href: "/?page=dashboard&ion=settings", icon: Settings },
     ];
 
     const handleLogout = () => {

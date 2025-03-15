@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, Payment, Bill, User, payment_schema, payments_schema  # Import payments_schema and User
+from models import db, Payment, Bill, User, payment_schema, payments_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
 
@@ -20,11 +20,11 @@ class PaymentResource(Resource):
         if not bill:
             return {"message": "Bill not found"}, 404
 
-        user = User.query.get(user_id)  # Get the user object to access phone number
+        user = User.query.get(user_id)
         if not user:
             return {"message": "User not found"}, 404
 
-        phone_number = user.phone  # Get the user's phone number
+        phone_number = user.phone
 
         response = initiate_mpesa_payment(bill.amount, phone_number)
         if response.get("status") == "success":
@@ -32,34 +32,101 @@ class PaymentResource(Resource):
                 user_id=user_id,
                 bill_id=bill_id,
                 amount_paid=bill.amount,
-                payment_reference=response.get("CheckoutRequestID"), #Use CheckoutRequestID here
-                status="Pending"  # Set status to "Pending" initially
+                payment_reference=response.get("CheckoutRequestID"),
+                status="Pending"
             )
             db.session.add(new_payment)
             db.session.commit()
 
-            #Bill status does not change on payment, it is updated in the callback
-
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")}) #return checkout request ID
+            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
         return {"message": "Payment failed", "error": response.get("message")}, 400
 
+class PayMultipleBillsResource(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        bill_ids = data.get("bill_ids")
 
-class PaymentHistoryResource(Resource):  # NEW RESOURCE
+        if not bill_ids or not isinstance(bill_ids, list):
+            return {"message": "Invalid bill_ids provided"}, 400
+
+        bills = Bill.query.filter(Bill.id.in_(bill_ids), Bill.user_id == user_id).all()
+
+        if len(bills) != len(bill_ids):
+            return {"message": "One or more bills not found or unauthorized"}, 404
+
+        user = User.query.get(user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+
+        phone_number = user.phone
+        total_amount = sum(bill.amount for bill in bills)
+
+        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all selected bills
+        if response.get("status") == "success":
+            for bill in bills:
+                new_payment = Payment(
+                    user_id=user_id,
+                    bill_id=bill.id,
+                    amount_paid=bill.amount,
+                    payment_reference=response.get("CheckoutRequestID"),
+                    status="Pending"
+                )
+                db.session.add(new_payment)
+            db.session.commit()
+
+            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
+        return {"message": "Payment failed", "error": response.get("message")}, 400
+
+class PayAllBillsResource(Resource):
+    @jwt_required()
+    def post(self):
+        user_id = get_jwt_identity()
+
+        bills = Bill.query.filter_by(user_id=user_id, status="Pending").all()
+
+        if not bills:
+            return {"message": "No pending bills found"}, 404
+
+        user = User.query.get(user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+
+        phone_number = user.phone
+        total_amount = sum(bill.amount for bill in bills)
+
+        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all bills
+        if response.get("status") == "success":
+            for bill in bills:
+                new_payment = Payment(
+                    user_id=user_id,
+                    bill_id=bill.id,
+                    amount_paid=bill.amount,
+                    payment_reference=response.get("CheckoutRequestID"),
+                    status="Pending"
+                )
+                db.session.add(new_payment)
+            db.session.commit()
+
+            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
+        return {"message": "Payment failed", "error": response.get("message")}, 400
+
+class PaymentHistoryResource(Resource):
     @jwt_required()
     def get(self):
         user_id = get_jwt_identity()
-        payments = Payment.query.filter_by(user_id=user_id).order_by(Payment.paid_at.desc()).limit(5).all() # get the last 5 payments
+        payments = Payment.query.filter_by(user_id=user_id).order_by(Payment.paid_at.desc()).limit(5).all()
 
-        return jsonify(payments_schema.dump(payments)) #Use payments_schema to handle multiple payments
+        return jsonify(payments_schema.dump(payments))
 
-# NEW CALLBACK ROUTE
 class MpesaCallbackResource(Resource):
     def post(self):
         """
         Handles the callback from M-Pesa after a transaction.
         """
         callback_data = request.get_json()
-        print("M-Pesa Callback Data:", callback_data)  # Log the callback data
+        print("M-Pesa Callback Data:", callback_data)
 
         # Extract relevant information from the callback
         try:
@@ -97,5 +164,7 @@ class MpesaCallbackResource(Resource):
             return {"message": "Invalid callback data"}, 400
 
 api.add_resource(PaymentResource, "/pay")
-api.add_resource(PaymentHistoryResource, "/history")  # NEW ROUTE
+api.add_resource(PaymentHistoryResource, "/history")
 api.add_resource(MpesaCallbackResource, "/callback") #This is the callback URL
+api.add_resource(PayMultipleBillsResource, "/pay-multiple")
+api.add_resource(PayAllBillsResource, "/pay-all")

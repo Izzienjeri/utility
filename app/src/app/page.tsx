@@ -7,7 +7,6 @@ import BillForm from '@/components/BillForm';
 import DashboardLayout from '@/components/DashboardLayout';
 import Overview from '@/components/dashboard/Overview';
 import ManageBills from '@/components/dashboard/ManageBills';
-import PaymentOptions from '@/components/dashboard/PaymentOptions';
 import PaymentHistory from '@/components/dashboard/PaymentHistory';
 import Notifications from '@/components/dashboard/Notifications';
 import Settings from '@/components/dashboard/Settings';
@@ -39,8 +38,6 @@ export default function HomePage() {
                 return <Overview />;
             case 'manage-bills':
                 return <ManageBills />;
-            case 'payment-options':
-                return <PaymentOptions />;
             case 'payment-history':
                 return <PaymentHistory />;
             case 'notifications':
