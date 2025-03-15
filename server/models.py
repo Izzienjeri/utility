@@ -47,7 +47,6 @@ class Bill(db.Model):
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    paybill_number = db.Column(db.String(50), nullable=True)  # Business Number
     till_number = db.Column(db.String(50), nullable=True)  # Till Number
     account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)

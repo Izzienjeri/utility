@@ -22,6 +22,8 @@ export default function HomePage() {
     const dashboardSection = searchParams.get('section') || 'overview';
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Add a loading state
+    const editBillId = searchParams.get('edit');
+    const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -58,10 +60,17 @@ export default function HomePage() {
         return (
             <DashboardLayout>
                 {renderDashboardSection()}
+                {checkoutRequestID && (
+                    <div>
+                        <p>M-Pesa payment initiated. Check your phone for the prompt.</p>
+                        <p>Checkout Request ID: {checkoutRequestID}</p>
+                        {/* You might want to add a button to check the payment status later */}
+                    </div>
+                )}
             </DashboardLayout>
         );
     } else if (page === 'billForm') {
-        return <BillForm userId={userId} />;
+         return <BillForm userId={userId} editBillId={editBillId || null} />;
     } else if (page === 'welcome') {
         return <WelcomeScreen />;
     } else {

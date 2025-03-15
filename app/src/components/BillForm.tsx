@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";  // Import useRouter
+import { useRouter } from "next/navigation"; // Import useRouter
 import {
   Calendar,
   Wallet,
@@ -19,9 +19,10 @@ const API_BASE_URL = "http://localhost:5000";
 
 interface BillFormProps {
   userId: string;
+  editBillId?: string | null;
 }
 
-const BillForm: React.FC<BillFormProps> = ({ userId }) => {
+const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [billType, setBillType] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentOption, setPaymentOption] = useState("");
@@ -36,21 +37,22 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter(); // Initialize useRouter
-
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const billTypes = [
     {
       value: "Electricity",
       icon: <Lightbulb className="inline-block mr-1" size={14} />,
     },
-    { value: "Rent", icon: <Home className="inline-block mr-1" size={14} />,
+    {
+      value: "Rent",
+      icon: <Home className="inline-block mr-1" size={14} />,
     },
     {
       value: "Water",
       icon: <Droplet className="inline-block mr-1" size={14} />,
     },
-    { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={14} />,
-    },
+    { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={14} /> },
     {
       value: "Trash",
       icon: <Trash2 className="inline-block mr-1" size={14} />,
@@ -63,7 +65,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   ];
 
   useEffect(() => {
-    const getToken = () => {
+    const getToken = async () => {
       if (typeof window !== "undefined" && localStorage) {
         const token = localStorage.getItem("accessToken");
         if (token) {
@@ -72,8 +74,43 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         } else {
           console.warn("No access token found in localStorage.");
           setError("Authentication required. Please login.");
+          return;
         }
         setIsLoadingToken(false);
+
+        if (editBillId) {
+          setIsEditMode(true); // Set to edit mode
+          // Fetch the bill data for editing
+          try {
+            const response = await fetch(
+              `${API_BASE_URL}/bills/${editBillId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const billData = await response.json();
+              setBillType(billData.bill_type);
+              setAmount(billData.amount);
+              setPaymentOption(billData.payment_option);
+              setPaybillNumber(billData.paybill_number || "");
+              setTillNumber(billData.till_number || "");
+              setAccountNumber(billData.account_number || "");
+              setDueDate(billData.due_date);
+            } else {
+              setError("Failed to fetch bill for editing.");
+            }
+          } catch (err) {
+            setError("An error occurred while fetching the bill.");
+            console.error(err);
+          }
+        } else {
+          setIsEditMode(false);
+        }
       } else {
         console.warn("localStorage is not available.");
         setError(
@@ -86,12 +123,11 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     getToken();
 
     // NEW CODE: Check for isFirstTimeUser and redirect if necessary
-    const isFirstTimeUser = localStorage.getItem('isFirstTimeUser');
-    if (!isFirstTimeUser) {
-        router.push('/?page=dashboard§ion=overview');
+    const isFirstTimeUser = localStorage.getItem("isFirstTimeUser");
+    if (!isFirstTimeUser && !editBillId) {
+      router.push("/?page=dashboard&ion=overview");
     }
-  }, [router]); // Add router to the dependency array
-
+  }, [router, editBillId]); // Add router to the dependency array
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,11 +158,16 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/bills/`, {
-        method: "POST",
+      const url = editBillId
+        ? `${API_BASE_URL}/bills/${editBillId}`
+        : `${API_BASE_URL}/bills/`;
+      const method = editBillId ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,  // ***VERY IMPORTANT***
+          Authorization: `Bearer ${accessToken}`, // ***VERY IMPORTANT***
         },
         body: JSON.stringify({
           bill_type: billType,
@@ -142,7 +183,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage("Bill added successfully!");
+        setSuccessMessage(
+          editBillId ? "Bill updated successfully!" : "Bill added successfully!"
+        );
         setError("");
         setBillType("");
         setAmount("");
@@ -153,8 +196,8 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         setDueDate("");
 
         // NEW CODE: Remove isFirstTimeUser and redirect to dashboard
-        localStorage.removeItem('isFirstTimeUser');
-        router.push('/?page=dashboard§ion=overview');
+        localStorage.removeItem("isFirstTimeUser");
+        router.push("/?page=dashboard&ion=manage-bills");
       } else {
         setError(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -228,7 +271,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                 <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
                   <Wallet className="text-white" size={30} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-800">Add a Bill</h2>
+                <h2 className="text-3xl font-bold text-gray-800">
+                  {isEditMode ? "Edit Bill" : "Add a Bill"}
+                </h2>
                 <p className="text-gray-600 mt-2 text-center">
                   Enter your bill details below
                 </p>
@@ -393,7 +438,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                         onChange={(e) => setPaybillNumber(e.target.value)}
                       />
                     </motion.div>
-
                     <motion.div className="mb-4" variants={itemVariants}>
                       <label
                         className="block text-gray-700 text-sm font-medium mb-2"
@@ -409,7 +453,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                         value={accountNumber}
                         onChange={(e) => setAccountNumber(e.target.value)}
                       />
-                    </motion.div>
+                    </motion.div>{" "}
                   </>
                 )}
 
@@ -462,7 +506,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                     whileHover="hover"
                     whileTap="tap"
                   >
-                    <span>Add Bill</span>
+                    <span>{isEditMode ? "Update Bill" : "Add Bill"}</span>
                     <ArrowRight className="ml-2" size={18} />
                   </motion.button>
                 </motion.div>

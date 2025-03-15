@@ -8,7 +8,7 @@ bill_blueprint = Blueprint("bills", __name__)
 api = Api(bill_blueprint)
 
 
-class BillResource(Resource):
+class BillListResource(Resource):  # Handles the / endpoint (list of bills)
     @jwt_required()
     def post(self):
         data = request.get_json()
@@ -63,4 +63,73 @@ class BillResource(Resource):
         return jsonify(bills_schema.dump(bills))
 
 
-api.add_resource(BillResource, "/")
+class BillResource(Resource):  # Handles the /<string:bill_id> endpoint (single bill)
+    @jwt_required()
+    def get(self, bill_id):
+      user_id = get_jwt_identity()
+      bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
+      if not bill:
+          return {"message": "Bill not found or unauthorized"}, 404
+      return jsonify(bill_schema.dump(bill))
+
+    @jwt_required()
+    def delete(self, bill_id):
+        user_id = get_jwt_identity()
+        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
+        if not bill:
+            return {"message": "Bill not found or unauthorized"}, 404
+
+        db.session.delete(bill)
+        db.session.commit()
+        return {"message": "Bill deleted successfully"}, 200
+
+    @jwt_required()
+    def put(self, bill_id):
+      data = request.get_json()
+      user_id = get_jwt_identity()
+
+      bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
+      if not bill:
+          return {"message": "Bill not found or unauthorized"}, 404
+
+      # Validate data before updating
+      errors = bill_schema.validate(data)
+      if errors:
+          return {"errors": errors}, 400
+
+      # Validate payment option and associated data
+      payment_option = data.get("payment_option")
+      paybill_number = data.get("paybill_number")
+      till_number = data.get("till_number")
+      account_number = data.get("account_number")
+
+      if payment_option == "paybill":
+          if not paybill_number or not account_number:
+              return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
+          if till_number:
+              return {"message": "Paybill should not have a Till Number"}, 400
+      elif payment_option == "till":
+          if not till_number:
+              return {"message": "Till requires a Till Number"}, 400
+          if paybill_number or account_number:
+              return {"message": "Till should not have Paybill or Account Number"}, 400
+      else:
+          return {"message": "Invalid payment option"}, 400
+
+      # Update bill attributes
+      bill.bill_type = data["bill_type"]
+      bill.amount = data["amount"]
+      bill.payment_option = payment_option
+      bill.paybill_number = paybill_number
+      bill.till_number = till_number
+      bill.account_number = account_number
+      bill.due_date = data["due_date"]
+      # Do not change status in edit, keep the existing one
+      # bill.status = "Pending"  # Consider not changing the status during edit
+
+      db.session.commit()
+      return jsonify({"message": "Bill updated successfully", "bill": bill_schema.dump(bill)})
+
+
+api.add_resource(BillListResource, "/") #route to get multiple bills
+api.add_resource(BillResource, "/<string:bill_id>") #route to get a single bill with edits, deletes and gets

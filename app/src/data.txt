@@ -65,7 +65,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
 
         if (isNewUser) {
-          router.push("/?page=billForm");
+          router.push("/?page=welcome"); // Redirect to welcome
         } else {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
@@ -112,7 +112,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
         setSuccessMessage(data.message || "Registration successful!");
         setError("");
-        router.push("/?page=billForm"); // Redirect to bill form immediately
+        router.push("/?page=welcome"); // Redirect to welcome first
         // END NEW CODE
       } else {
         if (data.errors) {
@@ -612,7 +612,7 @@ File: ./components/BillForm.tsx
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";  // Import useRouter
+import { useRouter } from "next/navigation"; // Import useRouter
 import {
   Calendar,
   Wallet,
@@ -628,9 +628,10 @@ const API_BASE_URL = "http://localhost:5000";
 
 interface BillFormProps {
   userId: string;
+  editBillId?: string | null;
 }
 
-const BillForm: React.FC<BillFormProps> = ({ userId }) => {
+const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [billType, setBillType] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentOption, setPaymentOption] = useState("");
@@ -645,14 +646,17 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter(); // Initialize useRouter
-
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const billTypes = [
     {
       value: "Electricity",
       icon: <Lightbulb className="inline-block mr-1" size={14} />,
     },
-    { value: "Rent", icon: <Home className="inline-block mr-1" size={14} /> },
+    {
+      value: "Rent",
+      icon: <Home className="inline-block mr-1" size={14} />,
+    },
     {
       value: "Water",
       icon: <Droplet className="inline-block mr-1" size={14} />,
@@ -670,7 +674,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
   ];
 
   useEffect(() => {
-    const getToken = () => {
+    const getToken = async () => {
       if (typeof window !== "undefined" && localStorage) {
         const token = localStorage.getItem("accessToken");
         if (token) {
@@ -679,8 +683,43 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         } else {
           console.warn("No access token found in localStorage.");
           setError("Authentication required. Please login.");
+          return;
         }
         setIsLoadingToken(false);
+
+        if (editBillId) {
+          setIsEditMode(true); // Set to edit mode
+          // Fetch the bill data for editing
+          try {
+            const response = await fetch(
+              `${API_BASE_URL}/bills/${editBillId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const billData = await response.json();
+              setBillType(billData.bill_type);
+              setAmount(billData.amount);
+              setPaymentOption(billData.payment_option);
+              setPaybillNumber(billData.paybill_number || "");
+              setTillNumber(billData.till_number || "");
+              setAccountNumber(billData.account_number || "");
+              setDueDate(billData.due_date);
+            } else {
+              setError("Failed to fetch bill for editing.");
+            }
+          } catch (err) {
+            setError("An error occurred while fetching the bill.");
+            console.error(err);
+          }
+        } else {
+          setIsEditMode(false);
+        }
       } else {
         console.warn("localStorage is not available.");
         setError(
@@ -693,12 +732,11 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     getToken();
 
     // NEW CODE: Check for isFirstTimeUser and redirect if necessary
-    const isFirstTimeUser = localStorage.getItem('isFirstTimeUser');
-    if (!isFirstTimeUser) {
-        router.push('/?page=dashboard&ion=overview');
+    const isFirstTimeUser = localStorage.getItem("isFirstTimeUser");
+    if (!isFirstTimeUser && !editBillId) {
+      router.push("/?page=dashboard&ion=overview");
     }
-  }, [router]); // Add router to the dependency array
-
+  }, [router, editBillId]); // Add router to the dependency array
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -729,11 +767,16 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/bills/`, {
-        method: "POST",
+      const url = editBillId
+        ? `${API_BASE_URL}/bills/${editBillId}`
+        : `${API_BASE_URL}/bills/`;
+      const method = editBillId ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,  // ***VERY IMPORTANT***
+          Authorization: `Bearer ${accessToken}`, // ***VERY IMPORTANT***
         },
         body: JSON.stringify({
           bill_type: billType,
@@ -749,7 +792,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage("Bill added successfully!");
+        setSuccessMessage(
+          editBillId ? "Bill updated successfully!" : "Bill added successfully!"
+        );
         setError("");
         setBillType("");
         setAmount("");
@@ -760,8 +805,8 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
         setDueDate("");
 
         // NEW CODE: Remove isFirstTimeUser and redirect to dashboard
-        localStorage.removeItem('isFirstTimeUser');
-        router.push('/?page=dashboard&ion=overview');
+        localStorage.removeItem("isFirstTimeUser");
+        router.push("/?page=dashboard&ion=manage-bills");
       } else {
         setError(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -835,7 +880,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                 <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
                   <Wallet className="text-white" size={30} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-800">Add a Bill</h2>
+                <h2 className="text-3xl font-bold text-gray-800">
+                  {isEditMode ? "Edit Bill" : "Add a Bill"}
+                </h2>
                 <p className="text-gray-600 mt-2 text-center">
                   Enter your bill details below
                 </p>
@@ -1000,7 +1047,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                         onChange={(e) => setPaybillNumber(e.target.value)}
                       />
                     </motion.div>
-
                     <motion.div className="mb-4" variants={itemVariants}>
                       <label
                         className="block text-gray-700 text-sm font-medium mb-2"
@@ -1016,7 +1062,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                         value={accountNumber}
                         onChange={(e) => setAccountNumber(e.target.value)}
                       />
-                    </motion.div>
+                    </motion.div>{" "}
                   </>
                 )}
 
@@ -1069,7 +1115,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
                     whileHover="hover"
                     whileTap="tap"
                   >
-                    <span>Add Bill</span>
+                    <span>{isEditMode ? "Update Bill" : "Add Bill"}</span>
                     <ArrowRight className="ml-2" size={18} />
                   </motion.button>
                 </motion.div>
@@ -1085,15 +1131,24 @@ const BillForm: React.FC<BillFormProps> = ({ userId }) => {
 };
 
 export default BillForm;
+
 ================================================================================
 File: ./components/DashboardLayout.tsx
 ================================================================================
-// app/src/components/DashboardLayout.tsx
-'use client';
+// DashboardLayout.tsx
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Home, Wallet, List, BarChart, Bell, Settings, LogOut } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+    Home,
+    Wallet,
+    List,
+    BarChart,
+    Bell,
+    Settings,
+    LogOut,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -1102,21 +1157,37 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const activePage = searchParams.get('section') || 'overview';
+    const activePage = searchParams.get("section") || "overview";
 
     const navigation = [
-        { name: 'Overview', href: '/?page=dashboard§ion=overview', icon: Home },
-        { name: 'Manage Bills', href: '/?page=dashboard§ion=manage-bills', icon: Wallet },
-        { name: 'Payment Options', href: '/?page=dashboard§ion=payment-options', icon: List },
-        { name: 'Payment History & Analytics', href: '/?page=dashboard§ion=payment-history', icon: BarChart },
-        { name: 'Notifications & Reminders', href: '/?page=dashboard§ion=notifications', icon: Bell },
-        { name: 'Settings', href: '/?page=dashboard§ion=settings', icon: Settings },
+        { name: "Overview", href: "/?page=dashboard§ion=overview", icon: Home },
+        {
+            name: "Manage Bills",
+            href: "/?page=dashboard§ion=manage-bills",
+            icon: Wallet,
+        },
+        {
+            name: "Payment Options",
+            href: "/?page=dashboard§ion=payment-options",
+            icon: List,
+        },
+        {
+            name: "Payment History & Analytics",
+            href: "/?page=dashboard§ion=payment-history",
+            icon: BarChart,
+        },
+        {
+            name: "Notifications & Reminders",
+            href: "/?page=dashboard§ion=notifications",
+            icon: Bell,
+        },
+        { name: "Settings", href: "/?page=dashboard§ion=settings", icon: Settings },
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('isFirstTimeUser');
-        router.push('/?page=login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("isFirstTimeUser");
+        router.push("/?page=login");
     };
 
     const containerVariants = {
@@ -1126,13 +1197,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             transition: {
                 duration: 0.5,
                 when: "beforeChildren",
-                staggerChildren: 0.1
-            }
+                staggerChildren: 0.1,
+            },
         },
         exit: {
             opacity: 0,
-            transition: { duration: 0.3 }
-        }
+            transition: { duration: 0.3 },
+        },
     };
 
     const itemVariants = {
@@ -1140,8 +1211,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         visible: {
             y: 0,
             opacity: 1,
-            transition: { type: "spring", stiffness: 300, damping: 24 }
-        }
+            transition: { type: "spring", stiffness: 300, damping: 24 },
+        },
     };
 
     return (
@@ -1161,7 +1232,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                             <motion.a
                                 key={item.name}
                                 href={item.href}
-                                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50 ${item.href === `/?page=dashboard§ion=${activePage}` ? 'bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white' : ''
+                                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50 ${item.href === `/?page=dashboard§ion=${activePage}` ? "bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white" : ""
                                     }`}
                                 variants={itemVariants}
                                 onClick={(e) => {
@@ -1169,7 +1240,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                                     router.push(item.href);
                                 }}
                             >
-                                <item.icon className="mr-2 h-5 w-5" style={{ color: item.href === `/?page=dashboard§ion=${activePage}` ? 'white' : undefined }} />
+                                <item.icon
+                                    className="mr-2 h-5 w-5"
+                                    style={{
+                                        color: item.href === `/?page=dashboard§ion=${activePage}`
+                                            ? "white"
+                                            : undefined,
+                                    }}
+                                />
                                 {item.name}
                             </motion.a>
                         ))}
@@ -1186,14 +1264,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </motion.aside>
 
             {/* Main Content */}
-            <div className="flex-1 p-4">
-                {children}
-            </div>
+            <div className="flex-1 p-4">{children}</div>
         </div>
     );
 };
 
 export default DashboardLayout;
+
 ================================================================================
 File: ./components/dashboard/PaymentHistory.tsx
 ================================================================================
@@ -1368,8 +1445,101 @@ File: ./components/dashboard/Overview.tsx
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+
+const API_BASE_URL = "http://localhost:5000";
+
+interface Bill {
+    id: string;
+    bill_type: string;
+    amount: number;
+    due_date: string;
+    status: string;
+}
+
+interface Transaction {
+    id: string;
+    bill_id: string;
+    user_id: string;
+    amount_paid: number;
+    payment_reference: string;
+    status: string;
+    paid_at: string; // Updated to string to match backend DateTime
+}
 
 const Overview = () => {
+    const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
+    const [totalDue, setTotalDue] = useState(0);
+    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+    const [accessToken, setAccessToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchBills = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                // Retrieve access token from localStorage
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    setError('No access token found. Please log in.');
+                    return;
+                }
+                setAccessToken(token);
+
+                // Fetch Bills
+                const billsResponse = await fetch(`${API_BASE_URL}/bills/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!billsResponse.ok) {
+                    throw new Error(`HTTP error fetching bills! status: ${billsResponse.status}`);
+                }
+
+                const billsData = await billsResponse.json();
+                setUpcomingBills(billsData);
+
+                // Calculate total due amount
+                const total = billsData.reduce((sum: number, bill: Bill) => {
+                    if (bill.status === 'Pending') {
+                        return sum + bill.amount;
+                    }
+                    return sum;
+                }, 0);
+                setTotalDue(total);
+
+                // Fetch Recent Transactions
+                const transactionsResponse = await fetch(`${API_BASE_URL}/payments/history`, { // Updated endpoint
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!transactionsResponse.ok) {
+                    console.warn("Failed to fetch transactions.");
+                    setRecentTransactions([]);
+                } else {
+                    const transactionsData: Transaction[] = await transactionsResponse.json();
+                    setRecentTransactions(transactionsData);
+                }
+
+            } catch (e: any) {
+                setError(`Failed to fetch data: ${e.message}`);
+                console.error("Error fetching data:", e);
+                setRecentTransactions([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBills();
+    }, []);
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -1394,21 +1564,51 @@ const Overview = () => {
             transition: { type: "spring", stiffness: 300, damping: 24 }
         }
     };
+
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Overview</motion.h2>
+
+            {isLoading && <div>Loading data...</div>}
+            {error && <div className="text-red-500">Error: {error}</div>}
+
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Upcoming Bills</h3>
-                <p className="text-gray-600">List of bills with due dates...</p>
+                {upcomingBills.length > 0 ? (
+                    <ul>
+                        {upcomingBills.map(bill => (
+                            <li key={bill.id} className="py-2 border-b">
+                                {bill.bill_type} - Due: {bill.due_date} - Amount: ${bill.amount}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-gray-600">No upcoming bills. Add a bill to get started!</p>
+                )}
             </motion.div>
+
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Total Due Amount</h3>
-                <p className="text-gray-600">Sum of all unpaid bills...</p>
+                <p className="text-gray-600">
+                    {totalDue > 0 ? `$${totalDue}` : 'No bills due.'}
+                </p>
             </motion.div>
+
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Recent Transactions</h3>
-                <p className="text-gray-600">Last few payments made...</p>
+                {recentTransactions.length > 0 ? (
+                    <ul>
+                        {recentTransactions.map(transaction => (
+                            <li key={transaction.id} className="py-2 border-b">
+                                Date: {transaction.paid_at} - Amount: ${transaction.amount_paid} - Ref: {transaction.payment_reference}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-gray-600">No recent transactions.</p>
+                )}
             </motion.div>
+
             <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Payment Reminder Status</h3>
                 <p className="text-gray-600">See if reminders have been sent...</p>
@@ -1421,12 +1621,108 @@ export default Overview;
 ================================================================================
 File: ./components/dashboard/ManageBills.tsx
 ================================================================================
-// app/src/components/dashboard/ManageBills.tsx
+// ManageBills.tsx
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Edit, Trash2 } from 'lucide-react';
+
+const API_BASE_URL = "http://localhost:5000";
+
+interface Bill {
+    id: string;
+    bill_type: string;
+    amount: number;
+    due_date: string;
+    status: string;
+    payment_option: string;
+    paybill_number: string | null;
+    till_number: string | null;
+    account_number: string | null;
+}
 
 const ManageBills = () => {
+    console.log("ManageBills component rendered"); // ADD THIS LINE
+    const [bills, setBills] = useState<Bill[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+
+    useEffect(() => {
+        const fetchBills = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    setError('No access token found. Please log in.');
+                    setIsLoading(false); // Stop loading if no token
+                    return;
+                }
+       
+                const response = await fetch(`${API_BASE_URL}/bills/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+       
+                if (!response.ok) {
+                    console.error("API Response Status:", response.status); // Log status code
+                    console.error("API Response Text:", await response.text()); // Log response body
+                    throw new Error(`HTTP error fetching bills! status: ${response.status}`);
+                }
+       
+                const data: Bill[] = await response.json();
+                setBills(data);
+                console.log("Bills data:", data); // ADD THIS LINE
+            } catch (e: any) {
+                setError(`Failed to fetch data: ${e.message}`);
+                console.error("Fetch error:", e); // Log the full error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBills();
+    }, []);
+
+    const handleDeleteBill = async (billId: string) => {
+        const confirmed = window.confirm("Are you sure you want to delete this bill?");
+        if (!confirmed) {
+            return;
+        }
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                setError('No access token found. Please log in.');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/bills/${billId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error deleting bill! status: ${response.status}`);
+            }
+
+            // Refresh the bill list
+            setBills(bills.filter(bill => bill.id !== billId)); //remove from the state
+            // Optionally, you could call fetchBills() again to get the updated list from the server
+        } catch (e: any) {
+            setError(`Failed to delete bill: ${e.message}`);
+        }
+    };
+    const handleEditBill = (billId: string) => {
+        router.push(`/?page=billForm&edit=${billId}`); // Navigate to BillForm with bill ID
+      };
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -1456,27 +1752,61 @@ const ManageBills = () => {
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Manage Bills</motion.h2>
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Add New Bill</h3>
-                <p className="text-gray-600">Select bill type (Electricity, Rent, Water, WiFi, Trash)...</p>
-            </motion.div>
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Edit Bill Details</h3>
-                <p className="text-gray-600">Update Paybill/Till Number, Account Number...</p>
-            </motion.div>
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Set Due Dates</h3>
-                <p className="text-gray-600">Choose payment deadlines...</p>
-            </motion.div>
-            <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Delete Bill</h3>
-                <p className="text-gray-600">Remove a bill if no longer applicable...</p>
-            </motion.div>
+
+            {error && <div className="text-red-500 mb-4">{error}</div>}
+            {isLoading ? (
+                <div>Loading bills...</div>
+            ) : (
+                <>
+                    <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
+                        <h3 className="text-lg font-medium mb-2 text-gray-700">Add New Bill</h3>
+                        <p className="text-gray-600">Select bill type (Electricity, Rent, Water, WiFi, Trash)...</p>
+                        <button
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2"
+                            onClick={() => router.push('/?page=billForm')}
+                        >
+                            Add Bill
+                        </button>
+                    </motion.div>
+
+                    {bills.length > 0 ? (
+                        <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+                            <h3 className="text-lg font-medium mb-2 text-gray-700">Your Bills</h3>
+                            <ul>
+                                {bills.map(bill => (
+                                    <li key={bill.id} className="py-2 border-b flex items-center justify-between">
+                                        {bill.bill_type} - Due: {bill.due_date} - Amount: ${bill.amount}
+                                        <div>
+                                            <button
+                                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded mr-2"
+                                                onClick={() => handleEditBill(bill.id)}
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 rounded"
+                                                onClick={() => handleDeleteBill(bill.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </motion.div>
+                    ) : (
+                        <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
+                            <p className="text-gray-600">No bills found.  Add a new bill to get started.</p>
+                        </motion.div>
+                    )}
+                </>
+            )}
         </motion.div>
     );
 };
 
 export default ManageBills;
+
 ================================================================================
 File: ./components/dashboard/Settings.tsx
 ================================================================================
@@ -1590,6 +1920,7 @@ export default function HomePage() {
     const dashboardSection = searchParams.get('section') || 'overview';
     const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
     const [isLoading, setIsLoading] = useState(true); // Add a loading state
+    const editBillId = searchParams.get('edit');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -1629,11 +1960,12 @@ export default function HomePage() {
             </DashboardLayout>
         );
     } else if (page === 'billForm') {
-        return <BillForm userId={userId} />;
+         return <BillForm userId={userId} editBillId={editBillId || null} />;
     } else if (page === 'welcome') {
         return <WelcomeScreen />;
     } else {
         return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'} />;
     }
 }
+
 ================================================================================
