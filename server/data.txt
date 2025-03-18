@@ -427,7 +427,7 @@ class PaymentResource(Resource):
 
         phone_number = user.phone
 
-        response = initiate_mpesa_payment(bill.amount, phone_number)
+        response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option)  # Pass payment_option to initiate_mpesa_payment
         if response.get("status") == "success":
             new_payment = Payment(
                 user_id=user_id,
@@ -464,9 +464,13 @@ class PayMultipleBillsResource(Resource):
         phone_number = user.phone
         total_amount = sum(bill.amount for bill in bills)
 
-        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all selected bills
-        if response.get("status") == "success":
-            for bill in bills:
+        # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
+        checkout_request_ids = []
+        payment_errors = []
+        for bill in bills:
+            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
+
+            if response.get("status") == "success":
                 new_payment = Payment(
                     user_id=user_id,
                     bill_id=bill.id,
@@ -475,10 +479,18 @@ class PayMultipleBillsResource(Resource):
                     status="Pending"
                 )
                 db.session.add(new_payment)
-            db.session.commit()
+                checkout_request_ids.append(response.get("CheckoutRequestID"))
+            else:
+                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
 
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
-        return {"message": "Payment failed", "error": response.get("message")}, 400
+        db.session.commit()
+
+        if checkout_request_ids:
+            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
+        else:
+             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
+
+
 
 class PayAllBillsResource(Resource):
     @jwt_required()
@@ -495,11 +507,14 @@ class PayAllBillsResource(Resource):
             return {"message": "User not found"}, 404
 
         phone_number = user.phone
-        total_amount = sum(bill.amount for bill in bills)
 
-        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all bills
-        if response.get("status") == "success":
-            for bill in bills:
+         # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
+        checkout_request_ids = []
+        payment_errors = []
+        for bill in bills:
+            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
+
+            if response.get("status") == "success":
                 new_payment = Payment(
                     user_id=user_id,
                     bill_id=bill.id,
@@ -508,10 +523,16 @@ class PayAllBillsResource(Resource):
                     status="Pending"
                 )
                 db.session.add(new_payment)
-            db.session.commit()
+                checkout_request_ids.append(response.get("CheckoutRequestID"))
+            else:
+                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
 
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
-        return {"message": "Payment failed", "error": response.get("message")}, 400
+        db.session.commit()
+
+        if checkout_request_ids:
+            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
+        else:
+             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
 
 class PaymentHistoryResource(Resource):
     @jwt_required()
@@ -746,20 +767,21 @@ def get_mpesa_access_token():
         return None
 
 
-def initiate_mpesa_payment(amount, phone_number): #Removed paybill, added phone_number
+def initiate_mpesa_payment(amount, phone_number, payment_option):
     """
     Initiates an STK Push payment request to M-Pesa.
+    Now uses same shortcode for Paybill and Till Number, differentiating by TransactionType.
     """
     access_token = get_mpesa_access_token()
     if not access_token:
         return {"status": "failed", "message": "Failed to obtain M-Pesa access token."}
 
     mpesa_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE")
+    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE") # Same for Paybill and Till
     passkey = os.getenv("MPESA_PASSKEY")
+    callback_url = os.getenv("MPESA_CALLBACK_URL")
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    # Generate password
     password = base64.b64encode(str(business_shortcode + passkey + timestamp).encode()).decode()
 
     headers = {
@@ -771,23 +793,31 @@ def initiate_mpesa_payment(amount, phone_number): #Removed paybill, added phone_
         "BusinessShortCode": business_shortcode,
         "Password": password,
         "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline", #or CustomerBuyGoodsOnline for Till
-        "Amount": int(amount), #Amount must be an integer
+        "Amount": int(amount),  # Amount must be an integer
         "PartyA": phone_number,  # Customer phone number
-        "PartyB": business_shortcode,  # Your paybill number
-        "PhoneNumber": phone_number, # Customer phone number
-        "CallBackURL": os.getenv("MPESA_CALLBACK_URL"), # Your callback URL
-        "AccountReference": "Bill Payment",
+        "PartyB": business_shortcode,  # Your paybill number, same as BusinessShortCode in sandbox
+        "PhoneNumber": phone_number,  # Customer phone number
+        "CallBackURL": callback_url,  # Your callback URL
         "TransactionDesc": "Payment of Utility Bill"
     }
+
+    if payment_option == "paybill":
+        payload["TransactionType"] = "CustomerPayBillOnline"
+        payload["AccountReference"] = "Bill Payment"  # Required for Paybill
+    elif payment_option == "till":
+        payload["TransactionType"] = "CustomerBuyGoodsOnline"
+        #No AccountReference here!
+    else:
+        return {"status": "failed", "message": "Invalid payment option"}
 
     try:
         response = requests.post(mpesa_url, json=payload, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
         print("M-Pesa STK Push Response:", json_response)  # Debugging
+
         if json_response.get("ResponseCode") == "0":
-           return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage")}
+            return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage")}
         else:
             return {"status": "failed", "message": json_response.get("ResponseDescription")}
 

@@ -5,9 +5,12 @@ from flask_restful import Api, Resource
 from models import db, Payment, Bill, User, payment_schema, payments_schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
+import logging
 
 payment_blueprint = Blueprint("payments", __name__)
 api = Api(payment_blueprint)
+logging.basicConfig(level=logging.DEBUG)
+
 
 class PaymentResource(Resource):
     @jwt_required()
@@ -25,8 +28,20 @@ class PaymentResource(Resource):
             return {"message": "User not found"}, 404
 
         phone_number = user.phone
+        logging.debug(f"Raw Phone Number from DB: {phone_number}")
 
-        response = initiate_mpesa_payment(bill.amount, phone_number)
+
+        # Format the phone number to 2547xxxxxxxx
+        if phone_number.startswith("+254"):
+            phone_number = phone_number[1:]  # Remove the +
+        elif phone_number.startswith("0"):
+            phone_number = "254" + phone_number[1:]  # Add 254 and remove the leading 0
+        elif phone_number.startswith("7"):
+             phone_number = "254" + phone_number  #Add 254 if it starts with 7
+
+
+        logging.debug(f"Formatted Phone Number: {phone_number}")
+        response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option)  # Pass payment_option to initiate_mpesa_payment
         if response.get("status") == "success":
             new_payment = Payment(
                 user_id=user_id,
@@ -63,9 +78,23 @@ class PayMultipleBillsResource(Resource):
         phone_number = user.phone
         total_amount = sum(bill.amount for bill in bills)
 
-        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all selected bills
-        if response.get("status") == "success":
-            for bill in bills:
+        # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
+        checkout_request_ids = []
+        payment_errors = []
+        for bill in bills:
+
+             # Format the phone number to 2547xxxxxxxx
+            if phone_number.startswith("+254"):
+                phone_number = phone_number[1:]  # Remove the +
+            elif phone_number.startswith("0"):
+                phone_number = "254" + phone_number[1:]  # Add 254 and remove the leading 0
+            elif phone_number.startswith("7"):
+                 phone_number = "254" + phone_number  #Add 254 if it starts with 7
+            logging.debug(f"Formatted Phone Number: {phone_number}")
+
+            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
+
+            if response.get("status") == "success":
                 new_payment = Payment(
                     user_id=user_id,
                     bill_id=bill.id,
@@ -74,10 +103,18 @@ class PayMultipleBillsResource(Resource):
                     status="Pending"
                 )
                 db.session.add(new_payment)
-            db.session.commit()
+                checkout_request_ids.append(response.get("CheckoutRequestID"))
+            else:
+                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
 
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
-        return {"message": "Payment failed", "error": response.get("message")}, 400
+        db.session.commit()
+
+        if checkout_request_ids:
+            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
+        else:
+             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
+
+
 
 class PayAllBillsResource(Resource):
     @jwt_required()
@@ -94,11 +131,23 @@ class PayAllBillsResource(Resource):
             return {"message": "User not found"}, 404
 
         phone_number = user.phone
-        total_amount = sum(bill.amount for bill in bills)
+        
+         # Format the phone number to 2547xxxxxxxx
+        if phone_number.startswith("+254"):
+            phone_number = phone_number[1:]  # Remove the +
+        elif phone_number.startswith("0"):
+            phone_number = "254" + phone_number[1:]  # Add 254 and remove the leading 0
+        elif phone_number.startswith("7"):
+             phone_number = "254" + phone_number  #Add 254 if it starts with 7
+        logging.debug(f"Formatted Phone Number: {phone_number}")
 
-        response = initiate_mpesa_payment(total_amount, phone_number) #one prompt for all bills
-        if response.get("status") == "success":
-            for bill in bills:
+         # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
+        checkout_request_ids = []
+        payment_errors = []
+        for bill in bills:
+            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
+
+            if response.get("status") == "success":
                 new_payment = Payment(
                     user_id=user_id,
                     bill_id=bill.id,
@@ -107,10 +156,16 @@ class PayAllBillsResource(Resource):
                     status="Pending"
                 )
                 db.session.add(new_payment)
-            db.session.commit()
+                checkout_request_ids.append(response.get("CheckoutRequestID"))
+            else:
+                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
 
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
-        return {"message": "Payment failed", "error": response.get("message")}, 400
+        db.session.commit()
+
+        if checkout_request_ids:
+            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
+        else:
+             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
 
 class PaymentHistoryResource(Resource):
     @jwt_required()
