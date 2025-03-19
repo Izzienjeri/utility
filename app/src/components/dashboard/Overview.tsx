@@ -3,6 +3,7 @@
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { format, isWithinInterval, parseISO } from 'date-fns'; // Import date-fns functions
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -22,6 +23,7 @@ interface Transaction {
     payment_reference: string;
     status: string;
     paid_at: string; // Updated to string to match backend DateTime
+    bill?: Bill; // Add bill property to Transaction Interface
 }
 
 const Overview = () => {
@@ -58,10 +60,21 @@ const Overview = () => {
                 }
 
                 const billsData = await billsResponse.json();
-                setUpcomingBills(billsData);
 
-                // Calculate total due amount
-                const total = billsData.reduce((sum: number, bill: Bill) => {
+                // Filter bills due in the next 10 days
+                const today = new Date();
+                const tenDaysFromNow = new Date();
+                tenDaysFromNow.setDate(today.getDate() + 10);
+
+                const upcoming = billsData.filter((bill: Bill) => {
+                    const dueDate = parseISO(bill.due_date); // Parse the due date string to a Date object
+                    return isWithinInterval(dueDate, { start: today, end: tenDaysFromNow });
+                });
+
+                setUpcomingBills(upcoming);
+
+                // Calculate total due amount from the filtered bills
+                const total = upcoming.reduce((sum: number, bill: Bill) => {
                     if (bill.status === 'Pending') {
                         return sum + bill.amount;
                     }
@@ -69,7 +82,7 @@ const Overview = () => {
                 }, 0);
                 setTotalDue(total);
 
-                // Fetch Recent Transactions
+                // Fetch Recent Transactions with Bill details
                 const transactionsResponse = await fetch(`${API_BASE_URL}/payments/history`, { // Updated endpoint
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -81,7 +94,7 @@ const Overview = () => {
                     console.warn("Failed to fetch transactions.");
                     setRecentTransactions([]);
                 } else {
-                    const transactionsData: Transaction[] = await transactionsResponse.json();
+                    let transactionsData: Transaction[] = await transactionsResponse.json();
                     setRecentTransactions(transactionsData);
                 }
 
@@ -122,6 +135,8 @@ const Overview = () => {
         }
     };
 
+
+
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Overview</motion.h2>
@@ -140,14 +155,14 @@ const Overview = () => {
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-gray-600">No upcoming bills. Add a bill to get started!</p>
+                    <p className="text-gray-600">No upcoming bills in the next 10 days.</p>
                 )}
             </motion.div>
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Total Due Amount</h3>
                 <p className="text-gray-600">
-                    {totalDue > 0 ? `$${totalDue}` : 'No bills due.'}
+                    {totalDue > 0 ? `$${totalDue}` : 'No bills due in the next 10 days.'}
                 </p>
             </motion.div>
 
@@ -155,11 +170,17 @@ const Overview = () => {
                 <h3 className="text-lg font-medium mb-2 text-gray-700">Recent Transactions</h3>
                 {recentTransactions.length > 0 ? (
                     <ul>
-                        {recentTransactions.map(transaction => (
-                            <li key={transaction.id} className="py-2 border-b">
-                                Date: {transaction.paid_at} - Amount: ${transaction.amount_paid} - Ref: {transaction.payment_reference}
-                            </li>
-                        ))}
+                        {recentTransactions.map(transaction => {
+                            const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
+                            //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
+                            const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
+
+                            return (
+                                <li key={transaction.id} className="py-2 border-b">
+                                    Bill: {billType} - Date: {formattedDate} - Amount: Ksh {transaction.amount_paid}
+                                </li>
+                            );
+                        })}
                     </ul>
                 ) : (
                     <p className="text-gray-600">No recent transactions.</p>

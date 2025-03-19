@@ -28,9 +28,14 @@ export default function HomePage() {
         if (typeof window !== 'undefined') {
             const storedValue = localStorage.getItem('isFirstTimeUser');
             setIsFirstTimeUser(storedValue === 'true');
+             // Get checkout request id from the URL if present
+            const checkout = searchParams.get('checkout');
+             if (checkout) {
+                  setCheckoutRequestID(checkout);
+              }
         }
         setIsLoading(false); // Set loading to false after attempting to retrieve the value
-    }, []);
+    }, [searchParams]);
 
     const renderDashboardSection = () => {
         switch (dashboardSection) {

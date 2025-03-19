@@ -89,13 +89,22 @@ class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
-
+        # Include all fields for serialization
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Payment
         load_instance = True
-        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT 
+        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT
+
+class PaymentWithBillSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Payment
+        load_instance = True
+        datetimeformat = "%Y-%m-%dT%H:%M:%S"
+
+    bill = fields.Nested(BillSchema) # Nest the bill schema to serialize the bill object
+
 
 
 user_schema = UserSchema()
@@ -104,3 +113,4 @@ bill_schema = BillSchema()
 bills_schema = BillSchema(many=True)
 payment_schema = PaymentSchema()
 payments_schema = PaymentSchema(many=True)
+payment_with_bill_schema = PaymentWithBillSchema() #This may be unused but can keep if needed in the future

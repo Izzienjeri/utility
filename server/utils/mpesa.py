@@ -3,6 +3,9 @@ import requests
 import os
 import base64
 from datetime import datetime
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 def get_mpesa_access_token():
     """
@@ -68,7 +71,7 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
         payload["AccountReference"] = "Bill Payment"  # Required for Paybill
     elif payment_option == "till":
         payload["TransactionType"] = "CustomerBuyGoodsOnline"
-        #No AccountReference here!
+        payload["AccountReference"] = "Bill Payment"  # Required for Till
     else:
         return {"status": "failed", "message": "Invalid payment option"}
 
@@ -77,9 +80,14 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
         print("M-Pesa STK Push Response:", json_response)  # Debugging
+        #Log the transaction type and payload
+        logging.debug(f"M-Pesa Transaction Type: {payload.get('TransactionType')}")
+        logging.debug(f"M-Pesa STK Push Payload: {payload}")
 
+
+        #if json_response.get("ResponseCode") == "00": #Old Code With Error
         if json_response.get("ResponseCode") == "0":
-            return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage")}
+            return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage"), "ResponseCode": json_response.get("ResponseCode")}
         else:
             return {"status": "failed", "message": json_response.get("ResponseDescription")}
 

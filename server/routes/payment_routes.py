@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, Payment, Bill, User, payment_schema, payments_schema
+from models import db, Payment, Bill, User, payment_schema, payments_schema, PaymentWithBillSchema  # Import the new schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
 import logging
@@ -30,7 +30,6 @@ class PaymentResource(Resource):
         phone_number = user.phone
         logging.debug(f"Raw Phone Number from DB: {phone_number}")
 
-
         # Format the phone number to 2547xxxxxxxx
         if phone_number.startswith("+254"):
             phone_number = phone_number[1:]  # Remove the +
@@ -39,133 +38,26 @@ class PaymentResource(Resource):
         elif phone_number.startswith("7"):
              phone_number = "254" + phone_number  #Add 254 if it starts with 7
 
-
         logging.debug(f"Formatted Phone Number: {phone_number}")
         response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option)  # Pass payment_option to initiate_mpesa_payment
+
+        # Only create payment record if STK push was initiated successfully
         if response.get("status") == "success":
             new_payment = Payment(
                 user_id=user_id,
                 bill_id=bill_id,
                 amount_paid=bill.amount,
-                payment_reference=response.get("CheckoutRequestID"),
+                payment_reference=response.get("CheckoutRequestID"), #Store the checkout request ID
                 status="Pending"
             )
             db.session.add(new_payment)
             db.session.commit()
 
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")})
-        return {"message": "Payment failed", "error": response.get("message")}, 400
-
-class PayMultipleBillsResource(Resource):
-    @jwt_required()
-    def post(self):
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        bill_ids = data.get("bill_ids")
-
-        if not bill_ids or not isinstance(bill_ids, list):
-            return {"message": "Invalid bill_ids provided"}, 400
-
-        bills = Bill.query.filter(Bill.id.in_(bill_ids), Bill.user_id == user_id).all()
-
-        if len(bills) != len(bill_ids):
-            return {"message": "One or more bills not found or unauthorized"}, 404
-
-        user = User.query.get(user_id)
-        if not user:
-            return {"message": "User not found"}, 404
-
-        phone_number = user.phone
-        total_amount = sum(bill.amount for bill in bills)
-
-        # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
-        checkout_request_ids = []
-        payment_errors = []
-        for bill in bills:
-
-             # Format the phone number to 2547xxxxxxxx
-            if phone_number.startswith("+254"):
-                phone_number = phone_number[1:]  # Remove the +
-            elif phone_number.startswith("0"):
-                phone_number = "254" + phone_number[1:]  # Add 254 and remove the leading 0
-            elif phone_number.startswith("7"):
-                 phone_number = "254" + phone_number  #Add 254 if it starts with 7
-            logging.debug(f"Formatted Phone Number: {phone_number}")
-
-            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
-
-            if response.get("status") == "success":
-                new_payment = Payment(
-                    user_id=user_id,
-                    bill_id=bill.id,
-                    amount_paid=bill.amount,
-                    payment_reference=response.get("CheckoutRequestID"),
-                    status="Pending"
-                )
-                db.session.add(new_payment)
-                checkout_request_ids.append(response.get("CheckoutRequestID"))
-            else:
-                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
-
-        db.session.commit()
-
-        if checkout_request_ids:
-            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
+            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")}) #return checkout request ID
         else:
-             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
+            return {"message": "Payment failed", "error": response.get("message")}, 400
 
 
-
-class PayAllBillsResource(Resource):
-    @jwt_required()
-    def post(self):
-        user_id = get_jwt_identity()
-
-        bills = Bill.query.filter_by(user_id=user_id, status="Pending").all()
-
-        if not bills:
-            return {"message": "No pending bills found"}, 404
-
-        user = User.query.get(user_id)
-        if not user:
-            return {"message": "User not found"}, 404
-
-        phone_number = user.phone
-        
-         # Format the phone number to 2547xxxxxxxx
-        if phone_number.startswith("+254"):
-            phone_number = phone_number[1:]  # Remove the +
-        elif phone_number.startswith("0"):
-            phone_number = "254" + phone_number[1:]  # Add 254 and remove the leading 0
-        elif phone_number.startswith("7"):
-             phone_number = "254" + phone_number  #Add 254 if it starts with 7
-        logging.debug(f"Formatted Phone Number: {phone_number}")
-
-         # For multiple bills, you'll need to handle each one separately, because the payment_option is different.
-        checkout_request_ids = []
-        payment_errors = []
-        for bill in bills:
-            response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option) # Pass payment_option
-
-            if response.get("status") == "success":
-                new_payment = Payment(
-                    user_id=user_id,
-                    bill_id=bill.id,
-                    amount_paid=bill.amount,
-                    payment_reference=response.get("CheckoutRequestID"),
-                    status="Pending"
-                )
-                db.session.add(new_payment)
-                checkout_request_ids.append(response.get("CheckoutRequestID"))
-            else:
-                payment_errors.append({ "bill_id": bill.id, "error": response.get("message") })
-
-        db.session.commit()
-
-        if checkout_request_ids:
-            return jsonify({"message": "Payment initiated successfully for some bills", "CheckoutRequestIDs": checkout_request_ids, "payment_errors": payment_errors})
-        else:
-             return {"message": "Payment failed for all bills", "error": payment_errors}, 400
 
 class PaymentHistoryResource(Resource):
     @jwt_required()
@@ -173,7 +65,8 @@ class PaymentHistoryResource(Resource):
         user_id = get_jwt_identity()
         payments = Payment.query.filter_by(user_id=user_id).order_by(Payment.paid_at.desc()).limit(5).all()
 
-        return jsonify(payments_schema.dump(payments))
+        # Use the new schema to serialize the payments with bill data
+        return PaymentWithBillSchema(many=True).dump(payments)
 
 class MpesaCallbackResource(Resource):
     def post(self):
@@ -189,6 +82,18 @@ class MpesaCallbackResource(Resource):
             result_code = callback_data['Body']['stkCallback']['ResultCode']
             result_desc = callback_data['Body']['stkCallback']['ResultDesc']
 
+            # **NEW: Extract the M-Pesa transaction code (adapt the path!)**
+            try:
+                mpesa_receipt_number = None
+                for item in callback_data['Body']['stkCallback']['CallbackMetadata']['Item']:
+                    if item['Name'] == 'MpesaReceiptNumber':
+                        mpesa_receipt_number = item['Value']
+                        break
+                #mpesa_receipt_number = callback_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] # Assuming it's the second item; adapt if needed
+            except (KeyError, TypeError) as e:
+                print(f"Error extracting MpesaReceiptNumber: {e}")
+                mpesa_receipt_number = None  # Handle the case where it's not found
+
             # Find the payment by CheckoutRequestID
             payment = Payment.query.filter_by(payment_reference=checkout_request_id).first()
 
@@ -200,13 +105,20 @@ class MpesaCallbackResource(Resource):
                 # Payment was successful
                 payment.status = "Completed"
 
+                # **NEW: Store the M-Pesa receipt number if available**
+                if mpesa_receipt_number:
+                    payment.payment_reference = mpesa_receipt_number
+                else:
+                    print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
+
                 #Update the bill
                 bill = Bill.query.filter_by(id=payment.bill_id).first()
                 bill.status = "Paid"
 
 
                 db.session.commit()
-                return {"message": "Payment successful"}, 200
+                #Include the bill id in the response
+                return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  # Send the bill_id back
             else:
                 # Payment failed or was cancelled
                 payment.status = "Failed"
@@ -221,5 +133,3 @@ class MpesaCallbackResource(Resource):
 api.add_resource(PaymentResource, "/pay")
 api.add_resource(PaymentHistoryResource, "/history")
 api.add_resource(MpesaCallbackResource, "/callback") #This is the callback URL
-api.add_resource(PayMultipleBillsResource, "/pay-multiple")
-api.add_resource(PayAllBillsResource, "/pay-all")
