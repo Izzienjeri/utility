@@ -1,4 +1,3 @@
-// File: ./components/Auth.tsx
 "use client";
 
 import { useState } from "react";
@@ -13,7 +12,7 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
-import { toast } from "sonner";  // Import toast
+import { toast } from "sonner";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -34,12 +33,10 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
   const router = useRouter();
 
-  // components/Auth.tsx
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
-      //setError("Please enter both email and password.");
       toast.error("Please enter both email and password.");
       return;
     }
@@ -58,7 +55,6 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
-        console.log("accessToken after login:", accessToken); // Debugging
 
         // Extract is_new_user from the response
         const isNewUser = data.is_new_user;
@@ -70,11 +66,9 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
       } else {
-        //setError(data.message || "Login failed.");
         toast.error(data.message || "Login failed.");
       }
     } catch (err) {
-      //setError("An error occurred during login.");
       toast.error("An error occurred during login.");
       console.error(err);
     }
@@ -84,13 +78,11 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!fullName || !email || !phone || !password || !confirmPassword) {
-      //setError("Please fill in all fields.");
       toast.error("Please fill in all fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      //setError("Passwords do not match.");
       toast.error("Passwords do not match.");
       return;
     }
@@ -109,12 +101,10 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
-        console.log("accessToken after register:", accessToken); // Debugging
 
         // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
-        //setSuccessMessage(data.message || "Registration successful!");
         toast.success(data.message || "Registration successful!");
         setError("");
         router.push("/?page=welcome"); // Redirect to welcome first
@@ -124,17 +114,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           const errorMessages = Object.entries(data.errors)
             .map(([field, message]) => `${field}: ${message}`)
             .join(", ");
-          //setError(`Registration failed: ${errorMessages}`);
           toast.error(`Registration failed: ${errorMessages}`);
         } else {
-          //setError(data.message || "Registration failed.");
           toast.error(data.message || "Registration failed.");
         }
         setSuccessMessage("");
         console.error("Registration error:", data);
       }
     } catch (err) {
-      //setError("An error occurred during registration.");
       toast.error("An error occurred during registration.");
       setSuccessMessage("");
       console.error("Registration fetch error:", err);
@@ -175,12 +162,12 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   };
 
   const buttonVariants = {
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95, transition: { duration: 0.2 } },
+    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    tap: { scale: 0.98, transition: { duration: 0.2 } },
   };
 
   const renderLoginForm = () => (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <motion.div
         className="w-full max-w-md"
         variants={containerVariants}
@@ -189,28 +176,28 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         exit="exit"
       >
         <motion.div
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
           variants={itemVariants}
         >
-          <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-          <div className="px-8 pt-8 pb-10">
+          <div className="px-8 pt-6 pb-8">
             <motion.div
-              className="flex flex-col items-center mb-8"
+              className="flex flex-col items-center mb-6"
               variants={itemVariants}
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                <Lock className="text-white" size={30} />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                <Lock className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">Welcome Back</h2>
-              <p className="text-gray-600 mt-2 text-center">
+              <h2 className="text-2xl font-semibold ">
+                Welcome Back
+              </h2>
+              <p className="text-gray-300 mt-1 text-center">
                 Sign in to access your account
               </p>
             </motion.div>
 
             {error && (
               <motion.div
-                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -220,17 +207,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             )}
 
             <form onSubmit={handleLogin}>
-              <motion.div className="mb-6" variants={itemVariants}>
+              <motion.div className="mb-4" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="email"
                 >
-                  <Mail className="inline-block mr-2" size={16} />
+                  <Mail className="inline-block mr-1" size={16} />
                   Email Address
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="email"
                     type="email"
                     placeholder="your.email@example.com"
@@ -240,17 +227,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-8" variants={itemVariants}>
+              <motion.div className="mb-6" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="password"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -260,7 +247,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -272,24 +259,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 variants={itemVariants}
               >
                 <motion.button
-                  className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
+                  className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
                   type="submit"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                 >
                   <span>Sign In</span>
-                  <ArrowRight className="ml-2" size={18} />
+                  <ArrowRight className="ml-2" size={16} />
                 </motion.button>
               </motion.div>
             </form>
 
-            <motion.div className="mt-8 text-center" variants={itemVariants}>
-              <p className="text-gray-600">
+            <motion.div className="mt-6 text-center" variants={itemVariants}>
+              <p className="text-gray-300">
                 Don't have an account?{" "}
                 <button
                   onClick={() => router.push("/?page=register")}
-                  className="text-[#9C27B0] font-medium hover:underline focus:outline-none"
+                  className="text-white font-medium hover:underline focus:outline-none"
                 >
                   Sign Up
                 </button>
@@ -302,37 +289,35 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   );
 
   const renderRegisterForm = () => (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <motion.div
-        className="w-full max-w-md my-8"
+        className="w-full max-w-md"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
       >
         <motion.div
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
           variants={itemVariants}
         >
-          <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-          <div className="px-8 pt-8 pb-10">
+          <div className="px-8 pt-6 pb-8">
             <motion.div
-              className="flex flex-col items-center mb-8"
+              className="flex flex-col items-center mb-6"
               variants={itemVariants}
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                <UserPlus className="text-white" size={30} />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                <UserPlus className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">
+              <h2 className="text-2xl font-semibold ">
                 Create Account
               </h2>
-              <p className="text-gray-600 mt-2 text-center">Join us today!</p>
+              <p className="text-gray-300 mt-1 text-center">Join us today!</p>
             </motion.div>
 
             {error && (
               <motion.div
-                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -343,7 +328,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
             {successMessage && (
               <motion.div
-                className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
+                className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -353,16 +338,16 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             )}
 
             <form onSubmit={handleRegister}>
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="fullName"
                 >
-                  <UserPlus className="inline-block mr-2" size={16} />
+                  <UserPlus className="inline-block mr-1" size={16} />
                   Full Name
                 </label>
                 <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                   id="fullName"
                   type="text"
                   placeholder="John Doe"
@@ -371,17 +356,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 />
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="email"
                 >
-                  <Mail className="inline-block mr-2" size={16} />
+                  <Mail className="inline-block mr-1" size={16} />
                   Email Address
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="email"
                     type="email"
                     placeholder="your.email@example.com"
@@ -391,17 +376,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="phone"
                 >
-                  <Phone className="inline-block mr-2" size={16} />
+                  <Phone className="inline-block mr-1" size={16} />
                   Phone Number
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="phone"
                     type="tel"
                     placeholder="+1 (555) 123-4567"
@@ -411,17 +396,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="password"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -431,24 +416,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </motion.div>
 
-              <motion.div className="mb-6" variants={itemVariants}>
+              <motion.div className="mb-5" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="confirmPassword"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Confirm Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -458,7 +443,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={toggleConfirmPasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={20} />
@@ -474,24 +459,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 variants={itemVariants}
               >
                 <motion.button
-                  className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
+                  className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
                   type="submit"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                 >
                   <span>Create Account</span>
-                  <ArrowRight className="ml-2" size={18} />
+                  <ArrowRight className="ml-2" size={16} />
                 </motion.button>
               </motion.div>
             </form>
 
-            <motion.div className="mt-8 text-center" variants={itemVariants}>
-              <p className="text-gray-600">
+            <motion.div className="mt-6 text-center" variants={itemVariants}>
+              <p className="text-gray-300">
                 Already have an account?{" "}
                 <button
                   onClick={() => router.push("/?page=login")}
-                  className="text-[#9C27B0] font-medium hover:underline focus:outline-none"
+                  className="text-white font-medium hover:underline focus:outline-none"
                 >
                   Sign In
                 </button>

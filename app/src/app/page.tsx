@@ -1,82 +1,78 @@
-// File: ./app/page.tsx
 // app/page.tsx
-'use client';
+"use client";
 
-import { useSearchParams, useRouter } from 'next/navigation';
-import Auth from '@/components/Auth';
-import BillForm from '@/components/BillForm';
-import DashboardLayout from '@/components/DashboardLayout';
-import Overview from '@/components/dashboard/Overview';
-import ManageBills from '@/components/dashboard/ManageBills';
-import Notifications from '@/components/dashboard/Notifications';
-import WelcomeScreen from '@/components/WelcomeScreen';
+import { useSearchParams, useRouter } from "next/navigation";
+import Auth from "@/components/Auth";
+import BillForm from "@/components/BillForm";
+import NavBar from "@/components/NavBar";
+import Dashboard from "@/components/Dashboard";
+import WelcomeScreen from "@/components/WelcomeScreen";
 import { useEffect, useState } from "react";
-import { Clock } from 'lucide-react'; // Import Clock icon
-
+import { Clock } from "lucide-react";
 
 export default function HomePage() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const page = searchParams.get('page') || 'login';
-    const userId = searchParams.get('userId') || '';
-    const dashboardSection = searchParams.get('ion') || 'overview'; // Corrected name
-    const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
-    const [isLoading, setIsLoading] = useState(true); // Add a loading state
-    const editBillId = searchParams.get('edit');
-    const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const page = searchParams.get("page") || "login";
+  const userId = searchParams.get("userId") || "";
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const editBillId = searchParams.get("edit");
+  const [checkoutRequestID, setCheckoutRequestID] =
+    useState<string | null>(null);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const storedValue = localStorage.getItem('isFirstTimeUser');
-            setIsFirstTimeUser(storedValue === 'true');
-            // Get checkout request id from the URL if present
-            const checkout = searchParams.get('checkout');
-            if (checkout) {
-                setCheckoutRequestID(checkout);
-            }
-        }
-        setIsLoading(false); // Set loading to false after attempting to retrieve the value
-    }, [searchParams]);
+  useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    setIsAuthenticated(!!accessToken);
 
-    const renderDashboardSection = () => {
-        switch (dashboardSection) {
-            case 'overview':
-                return <Overview />;
-            case 'manage-bills':
-                return <ManageBills />;
-            case 'notifications':
-                return <Notifications />;
-            default:
-                return <Overview />;
-        }
-    };
+    const storedValue = localStorage.getItem("isFirstTimeUser");
+    setIsFirstTimeUser(storedValue === "true");
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Clock className="animate-spin mr-2" /> Loading...
-            </div>
-        ); // Show a loading indicator while checking localStorage
+    const checkout = searchParams.get("checkout");
+    if (checkout) {
+      setCheckoutRequestID(checkout);
     }
 
-    if (page === 'dashboard') {
-        return (
-            <DashboardLayout key={dashboardSection}> {/* Key Prop Here! */}
-                {renderDashboardSection()}
-                {checkoutRequestID && (
-                    <div>
-                        <p>M-Pesa payment initiated. Check your phone for the prompt.</p>
-                        <p>Checkout Request ID: {checkoutRequestID}</p>
-                        {/* You might want to add a button to check the payment status later */}
-                    </div>
-                )}
-            </DashboardLayout>
-        );
-    } else if (page === 'billForm') {
-        return <BillForm userId={userId} editBillId={editBillId || null} />;
-    } else if (page === 'welcome') {
-        return <WelcomeScreen />;
-    } else {
-        return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'} />;
-    }
+    setIsLoading(false);
+  }, [searchParams]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <Clock className="animate-spin mr-2" /> Loading...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Auth initialRoute={page as "login" | "register"} />;
+  }
+
+  //Crucial: Correctly use the isFirstTimeUser value and remove item when navigating away
+  if (isFirstTimeUser === true && page === "welcome") {
+    return <WelcomeScreen />;
+  }
+
+  //Conditionally render navbar
+  const shouldShowNavBar = !(isFirstTimeUser === true && page === "billForm");
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      {shouldShowNavBar && <NavBar />}
+      <div className="flex-1 p-6">
+        {page === "billForm" ? (
+          <BillForm userId={userId} editBillId={editBillId || null} />
+        ) : (
+          <Dashboard />
+        )}
+        {checkoutRequestID && (
+          <div>
+            <p>M-Pesa payment initiated. Check your phone for the prompt.</p>
+            <p>Checkout Request ID: {checkoutRequestID}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

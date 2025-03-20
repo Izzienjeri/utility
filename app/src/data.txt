@@ -1,6 +1,5 @@
 File: ./components/Auth.tsx
 ================================================================================
-// File: ./components/Auth.tsx
 "use client";
 
 import { useState } from "react";
@@ -15,7 +14,7 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
-import { toast } from "sonner";  // Import toast
+import { toast } from "sonner";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -36,12 +35,10 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
   const router = useRouter();
 
-  // components/Auth.tsx
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
-      //setError("Please enter both email and password.");
       toast.error("Please enter both email and password.");
       return;
     }
@@ -60,7 +57,6 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
-        console.log("accessToken after login:", accessToken); // Debugging
 
         // Extract is_new_user from the response
         const isNewUser = data.is_new_user;
@@ -72,11 +68,9 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
       } else {
-        //setError(data.message || "Login failed.");
         toast.error(data.message || "Login failed.");
       }
     } catch (err) {
-      //setError("An error occurred during login.");
       toast.error("An error occurred during login.");
       console.error(err);
     }
@@ -86,13 +80,11 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!fullName || !email || !phone || !password || !confirmPassword) {
-      //setError("Please fill in all fields.");
       toast.error("Please fill in all fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      //setError("Passwords do not match.");
       toast.error("Passwords do not match.");
       return;
     }
@@ -111,12 +103,10 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
-        console.log("accessToken after register:", accessToken); // Debugging
 
         // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
-        //setSuccessMessage(data.message || "Registration successful!");
         toast.success(data.message || "Registration successful!");
         setError("");
         router.push("/?page=welcome"); // Redirect to welcome first
@@ -126,17 +116,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           const errorMessages = Object.entries(data.errors)
             .map(([field, message]) => `${field}: ${message}`)
             .join(", ");
-          //setError(`Registration failed: ${errorMessages}`);
           toast.error(`Registration failed: ${errorMessages}`);
         } else {
-          //setError(data.message || "Registration failed.");
           toast.error(data.message || "Registration failed.");
         }
         setSuccessMessage("");
         console.error("Registration error:", data);
       }
     } catch (err) {
-      //setError("An error occurred during registration.");
       toast.error("An error occurred during registration.");
       setSuccessMessage("");
       console.error("Registration fetch error:", err);
@@ -177,12 +164,12 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   };
 
   const buttonVariants = {
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95, transition: { duration: 0.2 } },
+    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    tap: { scale: 0.98, transition: { duration: 0.2 } },
   };
 
   const renderLoginForm = () => (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <motion.div
         className="w-full max-w-md"
         variants={containerVariants}
@@ -191,28 +178,28 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         exit="exit"
       >
         <motion.div
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
           variants={itemVariants}
         >
-          <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-          <div className="px-8 pt-8 pb-10">
+          <div className="px-8 pt-6 pb-8">
             <motion.div
-              className="flex flex-col items-center mb-8"
+              className="flex flex-col items-center mb-6"
               variants={itemVariants}
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                <Lock className="text-white" size={30} />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                <Lock className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">Welcome Back</h2>
-              <p className="text-gray-600 mt-2 text-center">
+              <h2 className="text-2xl font-semibold ">
+                Welcome Back
+              </h2>
+              <p className="text-gray-300 mt-1 text-center">
                 Sign in to access your account
               </p>
             </motion.div>
 
             {error && (
               <motion.div
-                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -222,17 +209,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             )}
 
             <form onSubmit={handleLogin}>
-              <motion.div className="mb-6" variants={itemVariants}>
+              <motion.div className="mb-4" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="email"
                 >
-                  <Mail className="inline-block mr-2" size={16} />
+                  <Mail className="inline-block mr-1" size={16} />
                   Email Address
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="email"
                     type="email"
                     placeholder="your.email@example.com"
@@ -242,17 +229,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-8" variants={itemVariants}>
+              <motion.div className="mb-6" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="password"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -262,7 +249,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -274,24 +261,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 variants={itemVariants}
               >
                 <motion.button
-                  className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
+                  className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
                   type="submit"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                 >
                   <span>Sign In</span>
-                  <ArrowRight className="ml-2" size={18} />
+                  <ArrowRight className="ml-2" size={16} />
                 </motion.button>
               </motion.div>
             </form>
 
-            <motion.div className="mt-8 text-center" variants={itemVariants}>
-              <p className="text-gray-600">
+            <motion.div className="mt-6 text-center" variants={itemVariants}>
+              <p className="text-gray-300">
                 Don't have an account?{" "}
                 <button
                   onClick={() => router.push("/?page=register")}
-                  className="text-[#9C27B0] font-medium hover:underline focus:outline-none"
+                  className="text-white font-medium hover:underline focus:outline-none"
                 >
                   Sign Up
                 </button>
@@ -304,37 +291,35 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
   );
 
   const renderRegisterForm = () => (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <motion.div
-        className="w-full max-w-md my-8"
+        className="w-full max-w-md"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
       >
         <motion.div
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
+          className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
           variants={itemVariants}
         >
-          <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-          <div className="px-8 pt-8 pb-10">
+          <div className="px-8 pt-6 pb-8">
             <motion.div
-              className="flex flex-col items-center mb-8"
+              className="flex flex-col items-center mb-6"
               variants={itemVariants}
             >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                <UserPlus className="text-white" size={30} />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                <UserPlus className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-3xl font-bold text-gray-800">
+              <h2 className="text-2xl font-semibold ">
                 Create Account
               </h2>
-              <p className="text-gray-600 mt-2 text-center">Join us today!</p>
+              <p className="text-gray-300 mt-1 text-center">Join us today!</p>
             </motion.div>
 
             {error && (
               <motion.div
-                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
+                className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -345,7 +330,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 
             {successMessage && (
               <motion.div
-                className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
+                className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-md"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -355,16 +340,16 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
             )}
 
             <form onSubmit={handleRegister}>
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="fullName"
                 >
-                  <UserPlus className="inline-block mr-2" size={16} />
+                  <UserPlus className="inline-block mr-1" size={16} />
                   Full Name
                 </label>
                 <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                   id="fullName"
                   type="text"
                   placeholder="John Doe"
@@ -373,17 +358,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 />
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="email"
                 >
-                  <Mail className="inline-block mr-2" size={16} />
+                  <Mail className="inline-block mr-1" size={16} />
                   Email Address
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="email"
                     type="email"
                     placeholder="your.email@example.com"
@@ -393,17 +378,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="phone"
                 >
-                  <Phone className="inline-block mr-2" size={16} />
+                  <Phone className="inline-block mr-1" size={16} />
                   Phone Number
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="phone"
                     type="tel"
                     placeholder="+1 (555) 123-4567"
@@ -413,17 +398,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 </div>
               </motion.div>
 
-              <motion.div className="mb-4" variants={itemVariants}>
+              <motion.div className="mb-3" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="password"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -433,24 +418,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </motion.div>
 
-              <motion.div className="mb-6" variants={itemVariants}>
+              <motion.div className="mb-5" variants={itemVariants}>
                 <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
+                  className="block text-gray-200 text-sm font-medium mb-2"
                   htmlFor="confirmPassword"
                 >
-                  <Lock className="inline-block mr-2" size={16} />
+                  <Lock className="inline-block mr-1" size={16} />
                   Confirm Password
                 </label>
                 <div className="relative">
                   <input
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••••"
@@ -460,7 +445,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                   <button
                     type="button"
                     onClick={toggleConfirmPasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#E91E63] focus:outline-none transition-colors duration-200"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none transition-colors duration-200"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={20} />
@@ -476,24 +461,24 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
                 variants={itemVariants}
               >
                 <motion.button
-                  className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
+                  className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
                   type="submit"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                 >
                   <span>Create Account</span>
-                  <ArrowRight className="ml-2" size={18} />
+                  <ArrowRight className="ml-2" size={16} />
                 </motion.button>
               </motion.div>
             </form>
 
-            <motion.div className="mt-8 text-center" variants={itemVariants}>
-              <p className="text-gray-600">
+            <motion.div className="mt-6 text-center" variants={itemVariants}>
+              <p className="text-gray-300">
                 Already have an account?{" "}
                 <button
                   onClick={() => router.push("/?page=login")}
-                  className="text-[#9C27B0] font-medium hover:underline focus:outline-none"
+                  className="text-white font-medium hover:underline focus:outline-none"
                 >
                   Sign In
                 </button>
@@ -524,105 +509,171 @@ export default Auth;
 ================================================================================
 File: ./components/WelcomeScreen.tsx
 ================================================================================
-// File: ./components/WelcomeScreen.tsx
 // app/src/components/WelcomeScreen.tsx
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { Heart, ArrowRight } from 'lucide-react';
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Heart, ArrowRight } from "lucide-react";
 
 const WelcomeScreen = () => {
-    const router = useRouter();
+  const router = useRouter();
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                duration: 0.5,
-                when: "beforeChildren",
-                staggerChildren: 0.1
-            }
-        },
-        exit: {
-            opacity: 0,
-            transition: { duration: 0.3 }
-        }
-    };
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
+  };
 
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 300, damping: 24 }
-        }
-    };
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
+  };
 
-    const buttonVariants = {
-        hover: { scale: 1.05, transition: { duration: 0.2 } },
-        tap: { scale: 0.95, transition: { duration: 0.2 } }
-    };
+  const buttonVariants = {
+    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    tap: { scale: 0.98, transition: { duration: 0.2 } },
+  };
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-white">
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <motion.div
+        className="w-full max-w-md"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <motion.div
+          className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
+          variants={itemVariants}
+        >
+          <div className="px-8 pt-6 pb-8">
             <motion.div
-                className="w-full max-w-md"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
+              className="flex flex-col items-center mb-6"
+              variants={itemVariants}
             >
-                <motion.div
-                    className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-                    variants={itemVariants}
-                >
-                    <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-                    <div className="px-8 pt-8 pb-10">
-                        <motion.div
-                            className="flex flex-col items-center mb-8"
-                            variants={itemVariants}
-                        >
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                                <Heart className="text-white" size={30} />
-                            </div>
-                            <h2 className="text-3xl font-bold text-gray-800">Welcome to PayTrack!</h2>
-                            <p className="text-gray-600 mt-2 text-center">
-                                Simplify your bill payments and stay on top of your expenses.
-                            </p>
-                            <p className="text-gray-600 mt-2 text-center">
-                                Get started now and never miss a payment again!
-                            </p>
-                        
-                        </motion.div>
-
-                        <motion.div className="flex items-center justify-center" variants={itemVariants}>
-                            <motion.button
-                                className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
-                                variants={buttonVariants}
-                                whileHover="hover"
-                                whileTap="tap"
-                                onClick={() => router.push('/?page=billForm')}
-                            >
-                                <span>Get Started</span>
-                                <ArrowRight className="ml-2" size={18} />
-                            </motion.button>
-                        </motion.div>
-                    </div>
-                </motion.div>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                <Heart className="text-blue-800" size={28} />
+              </div>
+              <h2 className="text-2xl font-semibold ">
+                Welcome to PayTrack!
+              </h2>
+              <p className="text-gray-300 mt-1 text-center">
+                Simplify your bill payments and stay on top of your expenses.
+              </p>
+              <p className="text-gray-300 mt-1 text-center">
+                Get started now and never miss a payment again!
+              </p>
             </motion.div>
-        </div>
-    );
+
+            <motion.div
+              className="flex items-center justify-center"
+              variants={itemVariants}
+            >
+              <motion.button
+                className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+                onClick={() => router.push("/?page=billForm")}
+              >
+                <span>Get Started</span>
+                <ArrowRight className="ml-2" size={16} />
+              </motion.button>
+            </motion.div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
 };
 
 export default WelcomeScreen;
+================================================================================
+File: ./components/Dashboard.tsx
+================================================================================
+// components/Dashboard.tsx
+"use client";
 
+import { useState } from "react";
+import Overview from "./dashboard/Overview";
+import ManageBills from "./dashboard/ManageBills";
+import Notifications from "./dashboard/Notifications";
+
+const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState("overview"); // Default to overview
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
+
+  return (
+    <div className="container mx-auto py-8">
+      {/* Tab Navigation */}
+      <div className="mb-4">
+        <nav className="flex space-x-4">
+          <button
+            className={`px-4 py-2 rounded-md text-gray-700 ${
+              activeTab === "overview"
+                ? "bg-teal-500 text-white font-semibold" // Highlight active tab
+                : "bg-gray-100 hover:bg-gray-200"
+            }`}
+            onClick={() => handleTabChange("overview")}
+          >
+            Overview
+          </button>
+          <button
+            className={`px-4 py-2 rounded-md text-gray-700 ${
+              activeTab === "manage-bills"
+                ? "bg-teal-500 text-white font-semibold"
+                : "bg-gray-100 hover:bg-gray-200"
+            }`}
+            onClick={() => handleTabChange("manage-bills")}
+          >
+            Manage Bills
+          </button>
+          <button
+            className={`px-4 py-2 rounded-md text-gray-700 ${
+              activeTab === "notifications"
+                ? "bg-teal-500 text-white font-semibold"
+                : "bg-gray-100 hover:bg-gray-200"
+            }`}
+            onClick={() => handleTabChange("notifications")}
+          >
+            Notifications
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-4">
+        {activeTab === "overview" && <Overview />}
+        {activeTab === "manage-bills" && <ManageBills />}
+        {activeTab === "notifications" && <Notifications />}
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
 ================================================================================
 File: ./components/BillForm.tsx
 ================================================================================
-// File: ./components/BillForm.tsx
 // app/src/components/BillForm.tsx
 "use client";
 
@@ -651,14 +702,12 @@ interface BillFormProps {
 const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [billType, setBillType] = useState("");
   const [amount, setAmount] = useState("");
-  //const [paymentOption, setPaymentOption] = useState("");  // Removed Payment Option
   const [paybillNumber, setPaybillNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isBillTypeOpen, setIsBillTypeOpen] = useState(false);
-  //const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false; //Removed Payment option
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter();
@@ -684,22 +733,16 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     },
   ];
 
-  //const paymentOptions = [   // Removed payment option object
-  //  { value: "paybill", label: "Paybill" },
-  //  //{ value: "till", label: "Till Number" }, // Removed Till option
-  //];
-
   useEffect(() => {
     const getToken = async () => {
       if (typeof window !== "undefined" && localStorage) {
         const token = localStorage.getItem("accessToken");
         if (token) {
           setAccessToken(token);
-          console.log("accessToken in BillForm:", token);
         } else {
           console.warn("No access token found in localStorage.");
           toast.error("Authentication required. Please login.");
-          router.push("/?page=login"); // Redirect to login
+          router.push("/?page=login");
           return;
         }
         setIsLoadingToken(false);
@@ -721,7 +764,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
               const billData = await response.json();
               setBillType(billData.bill_type);
               setAmount(billData.amount);
-              //setPaymentOption(billData.payment_option); // Removed Payment Option
               setPaybillNumber(billData.paybill_number || "");
               setAccountNumber(billData.account_number || "");
               setDueDate(billData.due_date);
@@ -737,7 +779,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         }
       } else {
         console.warn("localStorage is not available.");
-        toast.error("localStorage is not available. Please enable cookies or use a different browser.");
+        toast.error(
+          "localStorage is not available. Please enable cookies or use a different browser."
+        );
         setIsLoadingToken(false);
       }
     };
@@ -763,17 +807,18 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       return;
     }
 
-    if (!billType || !amount || !paybillNumber || !accountNumber || !dueDate) { // Removed payment option
-      toast.error("Please fill in all required fields, including Paybill and Account Numbers.");
+    if (!billType || !amount || !paybillNumber || !accountNumber || !dueDate) {
+      toast.error(
+        "Please fill in all required fields, including Paybill and Account Numbers."
+      );
       return;
     }
 
-      // Validate Paybill and Account Number
+    // Validate Paybill and Account Number
     if (!paybillNumber || !accountNumber) {
-        toast.error("Paybill requires both Paybill Number and Account Number.");
-        return;
+      toast.error("Paybill requires both Paybill Number and Account Number.");
+      return;
     }
-
 
     try {
       const url = editBillId
@@ -803,11 +848,12 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(editBillId ? "Bill updated successfully!" : "Bill added successfully!");
+        toast.success(
+          editBillId ? "Bill updated successfully!" : "Bill added successfully!"
+        );
         setError("");
         setBillType("");
         setAmount("");
-        //setPaymentOption(""); //removed payment option
         setPaybillNumber("");
         setAccountNumber("");
         setDueDate("");
@@ -851,685 +897,663 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   };
 
   const buttonVariants = {
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95, transition: { duration: 0.2 } },
+    hover: { scale: 1.02, transition: { duration: 0.2 } },
+    tap: { scale: 0.98, transition: { duration: 0.2 } },
   };
 
   if (isLoadingToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div>Loading authentication token...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-    {accessToken ? (
-      <motion.div
-        className="w-full max-w-md"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      {accessToken ? (
         <motion.div
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-          variants={itemVariants}
+          className="w-full max-w-md"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
         >
-          <div className="h-3 bg-gradient-to-r from-[#E91E63] to-[#9C27B0]"></div>
-
-          <div className="px-8 pt-8 pb-10">
-            <motion.div
-              className="flex flex-col items-center mb-8"
-              variants={itemVariants}
-            >
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
-                <Wallet className="text-white" size={30} />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-800">
-                {isEditMode ? "Edit Bill" : "Add a Bill"}
-              </h2>
-              <p className="text-gray-600 mt-2 text-center italic">
-                                Currently, we only support  Paybill payments.
-                            </p>
-              {/* Removed Here */}
-            </motion.div>
-
-            {error && (
+          <motion.div
+            className="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-blue-900 to-teal-500 text-white"
+            variants={itemVariants}
+          >
+            <div className="px-8 pt-6 pb-8">
               <motion.div
-                className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-lg"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {error}
-              </motion.div>
-            )}
-
-            {successMessage && (
-              <motion.div
-                className="mb-6 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-lg"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {successMessage}
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <motion.div className="mb-4" variants={itemVariants}>
-                <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
-                  htmlFor="billType"
-                >
-                  <span className="inline-block mr-2">
-                    <Home size={16} />
-                  </span>
-                  Bill Type
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between"
-                    onClick={() => setIsBillTypeOpen(!isBillTypeOpen)}
-                  >
-                    {billType || "Select Bill Type"}
-                    <span>▼</span>
-                  </button>
-                  {isBillTypeOpen && (
-                    <div className="absolute left-0 mt-1 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                      <div
-                        className="py-1"
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="options-menu"
-                      >
-                        {billTypes.map((type) => (
-                          <button
-                            key={type.value}
-                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                            role="menuitem"
-                            onClick={() => {
-                              setBillType(type.value);
-                              setIsBillTypeOpen(false);
-                            }}
-                          >
-                            <span className="inline-block mr-1">
-                              {type.icon}
-                            </span>
-                            {type.value}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              <motion.div className="mb-4" variants={itemVariants}>
-                <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
-                  htmlFor="amount"
-                >
-                  <span className="inline-block mr-2">
-                    <Wallet size={16} />
-                  </span>
-                  Amount
-                </label>
-                <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
-                  id="amount"
-                  type="number"
-                  placeholder="Enter Amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </motion.div>
-
-              <motion.div className="mb-4" variants={itemVariants}>
-                <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
-                  htmlFor="paybillNumber"
-                >
-                  Paybill Number (Business Number)
-                </label>
-                <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
-                  id="paybillNumber"
-                  type="text"
-                  placeholder="Enter Paybill Number"
-                  value={paybillNumber}
-                  onChange={(e) => setPaybillNumber(e.target.value)}
-                />
-              </motion.div>
-              <motion.div className="mb-4" variants={itemVariants}>
-                <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
-                  htmlFor="accountNumber"
-                >
-                  Account Number
-                </label>
-                <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
-                  id="accountNumber"
-                  type="text"
-                  placeholder="Enter Account Number"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                />
-              </motion.div>
-
-
-              <motion.div className="mb-6" variants={itemVariants}>
-                <label
-                  className="block text-gray-700 text-sm font-medium mb-2"
-                  htmlFor="dueDate"
-                >
-                  <span className="inline-block mr-2">
-                    <Calendar size={16} />
-                  </span>
-                  Due Date
-                </label>
-                <input
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </motion.div>
-
-              <motion.div
-                className="flex items-center justify-between"
+                className="flex flex-col items-center mb-6"
                 variants={itemVariants}
               >
-                <motion.button
-                  className="w-full bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
-                  type="submit"
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  <span>{isEditMode ? "Update Bill" : "Add Bill"}</span>
-                  <ArrowRight className="ml-2" size={18} />
-                </motion.button>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
+                  <Wallet className="text-blue-800" size={28} />
+                </div>
+                <h2 className="text-2xl font-semibold ">
+                  {isEditMode ? "Edit Bill" : "Add a Bill"}
+                </h2>
+                <p className="text-gray-300 mt-1 text-center italic">
+                  Currently, we only support Paybill payments.
+                </p>
               </motion.div>
-            </form>
-          </div>
+
+              {error && (
+                <motion.div
+                  className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-sm rounded-md"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              {successMessage && (
+                <motion.div
+                  className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 text-sm rounded-md"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {successMessage}
+                </motion.div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <motion.div className="mb-3" variants={itemVariants}>
+                  <label
+                    className="block text-gray-200 text-sm font-medium mb-2"
+                    htmlFor="billType"
+                  >
+                    <span className="inline-block mr-1">
+                      <Home size={16} />
+                    </span>
+                    Bill Type
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between text-black"
+                      onClick={() => setIsBillTypeOpen(!isBillTypeOpen)}
+                    >
+                      {billType || "Select Bill Type"}
+                      <span>▼</span>
+                    </button>
+                    {isBillTypeOpen && (
+                      <div className="absolute left-0 mt-1 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                        <div
+                          className="py-1"
+                          role="menu"
+                          aria-orientation="vertical"
+                          aria-labelledby="options-menu"
+                        >
+                          {billTypes.map((type) => (
+                            <button
+                              key={type.value}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              role="menuitem"
+                              onClick={() => {
+                                setBillType(type.value);
+                                setIsBillTypeOpen(false);
+                              }}
+                            >
+                              <span className="inline-block mr-1">
+                                {type.icon}
+                              </span>
+                              {type.value}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+
+                <motion.div className="mb-3" variants={itemVariants}>
+                  <label
+                    className="block text-gray-200 text-sm font-medium mb-2"
+                    htmlFor="amount"
+                  >
+                    <span className="inline-block mr-1">
+                      <Wallet size={16} />
+                    </span>
+                    Amount
+                  </label>
+                  <input
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
+                    id="amount"
+                    type="number"
+                    placeholder="Enter Amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </motion.div>
+
+                <motion.div className="mb-3" variants={itemVariants}>
+                  <label
+                    className="block text-gray-200 text-sm font-medium mb-2"
+                    htmlFor="paybillNumber"
+                  >
+                    Paybill Number (Business Number)
+                  </label>
+                  <input
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
+                    id="paybillNumber"
+                    type="text"
+                    placeholder="Enter Paybill Number"
+                    value={paybillNumber}
+                    onChange={(e) => setPaybillNumber(e.target.value)}
+                  />
+                </motion.div>
+                <motion.div className="mb-3" variants={itemVariants}>
+                  <label
+                    className="block text-gray-200 text-sm font-medium mb-2"
+                    htmlFor="accountNumber"
+                  >
+                    Account Number
+                  </label>
+                  <input
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
+                    id="accountNumber"
+                    type="text"
+                    placeholder="Enter Account Number"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                  />
+                </motion.div>
+
+                <motion.div className="mb-5" variants={itemVariants}>
+                  <label
+                    className="block text-gray-200 text-sm font-medium mb-2"
+                    htmlFor="dueDate"
+                  >
+                    <span className="inline-block mr-1">
+                      <Calendar size={16} />
+                    </span>
+                    Due Date
+                  </label>
+                  <input
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none text-black"
+                    id="dueDate"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </motion.div>
+
+                <motion.div
+                  className="flex items-center justify-between"
+                  variants={itemVariants}
+                >
+                  <motion.button
+                    className="w-full bg-white text-blue-800 font-medium py-2.5 px-5 rounded-md flex items-center justify-center shadow-md hover:bg-gray-200 transition-colors duration-300"
+                    type="submit"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <span>{isEditMode ? "Update Bill" : "Add Bill"}</span>
+                    <ArrowRight className="ml-2" size={16} />
+                  </motion.button>
+                </motion.div>
+              </form>
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
-    ) : (
-      <div>Authentication required. Please login.</div>
-    )}
-  </div>
-);
+      ) : (
+        <div>Authentication required. Please login.</div>
+      )}
+    </div>
+  );
 };
 
 export default BillForm;
 ================================================================================
-File: ./components/DashboardLayout.tsx
+File: ./components/NavBar.tsx
 ================================================================================
-// File: ./components/DashboardLayout.tsx
-// DashboardLayout.tsx
+// components/NavBar.tsx
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-    Home,
-    Wallet,
-    List,
-    BarChart,
-    Bell,
-    Settings,
-    LogOut,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 
-interface DashboardLayoutProps {
-    children: React.ReactNode;
-}
+const NavBar = () => {
+  const router = useRouter();
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const activePage = searchParams.get("ion") || "overview";  // Use 'ion' here
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("isFirstTimeUser");
+    router.push("/?page=login");
+  };
 
-    const navigation = [
-        { name: "Overview", href: "/?page=dashboard&ion=overview", icon: Home },
-        {
-            name: "Manage Bills",
-            href: "/?page=dashboard&ion=manage-bills",
-            icon: Wallet,
-        },
-        {
-            name: "Notifications & Reminders",
-            href: "/?page=dashboard&ion=notifications",
-            icon: Bell,
-        },
-    ];
+  return (
+    <nav className="bg-white shadow-md py-4">
+      <div className="container mx-auto flex items-center justify-between">
+        <motion.h1 className="text-2xl font-bold text-gray-800">
+          BillEase
+        </motion.h1>
 
-    const handleLogout = () => {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("isFirstTimeUser");
-        router.push("/?page=login");
-    };
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                duration: 0.5,
-                when: "beforeChildren",
-                staggerChildren: 0.1,
-            },
-        },
-        exit: {
-            opacity: 0,
-            transition: { duration: 0.3 },
-        },
-    };
-
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 300, damping: 24 },
-        },
-    };
-
-    return (
-        <div className="min-h-screen flex bg-gray-50">
-            {/* Sidebar */}
-            <motion.aside
-                className="w-64 bg-white shadow-md"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-            >
-                <div className="p-4">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">BillEase</h1>
-                     
-                    <nav>
-                        {navigation.map((item) => (
-                            <motion.a
-                                key={item.name}
-                                href={item.href}
-                                className={`flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50 ${item.name.toLowerCase().replace(/ /g, '-') === activePage ? "bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white" : ""
-                                    }`}
-                                variants={itemVariants}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    router.push(item.href);
-                                }}
-                            >
-                                <item.icon
-                                    className="mr-2 h-5 w-5"
-                                    style={{
-                                        color: item.name.toLowerCase().replace(/ /g, '-') === activePage
-                                            ? "white"
-                                            : undefined,
-                                    }}
-                                />
-                                {item.name}
-                            </motion.a>
-                        ))}
-                        <motion.button
-                            className="flex items-center py-2 px-4 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                            onClick={handleLogout}
-                            variants={itemVariants}
-                        >
-                            <LogOut className="mr-2 h-5 w-5" />
-                            Logout
-                        </motion.button>
-                    </nav>
-                </div>
-            </motion.aside>
-
-            {/* Main Content */}
-            <div className="flex-1 p-4">{children}</div>
-        </div>
-    );
+        <motion.button
+          className="text-gray-700 hover:text-gray-900 flex items-center"
+          onClick={handleLogout}
+          whileHover={{ scale: 1.05 }} // Optional: Add a hover effect
+          whileTap={{ scale: 0.95 }} // Optional: Add a tap effect
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Logout
+        </motion.button>
+      </div>
+    </nav>
+  );
 };
 
-export default DashboardLayout;
+export default NavBar;
 ================================================================================
 File: ./components/dashboard/Notifications.tsx
 ================================================================================
-// File: ./components/dashboard/Notifications.tsx
 // app/src/components/dashboard/Notifications.tsx
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
 const Notifications = () => {
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                duration: 0.5,
-                when: "beforeChildren",
-                staggerChildren: 0.1
-            }
-        },
-        exit: {
-            opacity: 0,
-            transition: { duration: 0.3 }
-        }
-    };
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
+  };
 
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 300, damping: 24 }
-        }
-    };
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
+  };
 
-    return (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-            <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Notifications & Reminders</motion.h2>
-              <p className="text-gray-600 mt-2 text-center">
-                  *We currently only support Paybill payments.*
-              </p>
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">View Reminders</h3>
-                <p className="text-gray-600">See upcoming email reminders...</p>
-            </motion.div>
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Resend Reminder</h3>
-                <p className="text-gray-600">If a user wants to get another reminder...</p>
-            </motion.div>
-            <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Unpaid Bill Alerts</h3>
-                <p className="text-gray-600">Notifications for overdue payments...</p>
-            </motion.div>
-        </motion.div>
-    );
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <motion.h2
+        className="text-2xl font-semibold mb-4 text-gray-800"
+        variants={itemVariants}
+      >
+        Notifications & Reminders
+      </motion.h2>
+      <p className="text-gray-600 mt-2 text-center">
+        *We currently only support Paybill payments.*
+      </p>
+      <motion.div
+        className="bg-white shadow-md rounded-md p-4 mb-4"
+        variants={itemVariants}
+      >
+        <h3 className="text-lg font-medium mb-2 text-gray-700">
+          View Reminders
+        </h3>
+        <p className="text-gray-600">See upcoming email reminders...</p>
+      </motion.div>
+      <motion.div
+        className="bg-white shadow-md rounded-md p-4 mb-4"
+        variants={itemVariants}
+      >
+        <h3 className="text-lg font-medium mb-2 text-gray-700">
+          Resend Reminder
+        </h3>
+        <p className="text-gray-600">
+          If a user wants to get another reminder...
+        </p>
+      </motion.div>
+      <motion.div
+        className="bg-white shadow-md rounded-md p-4"
+        variants={itemVariants}
+      >
+        <h3 className="text-lg font-medium mb-2 text-gray-700">
+          Unpaid Bill Alerts
+        </h3>
+        <p className="text-gray-600">Notifications for overdue payments...</p>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 export default Notifications;
 ================================================================================
 File: ./components/dashboard/Overview.tsx
 ================================================================================
-// File: ./components/dashboard/Overview.tsx
 // app/src/components/dashboard/Overview.tsx
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { format, isWithinInterval, parseISO } from 'date-fns'; // Import date-fns functions
-import { toast } from 'sonner'; // Import toast
-import { Clock, CheckCircle, AlertTriangle, Wallet, Calendar, LucideIcon } from 'lucide-react'; // Import icons
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { format, isWithinInterval, parseISO } from "date-fns";
+import { toast } from "sonner";
+import {
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Wallet,
+  Calendar,
+  LucideIcon,
+  Zap,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const API_BASE_URL = "http://localhost:5000";
 
 interface Bill {
-    id: string;
-    bill_type: string;
-    amount: number;
-    due_date: string;
-    status: string;
+  id: string;
+  bill_type: string;
+  amount: number;
+  due_date: string;
+  status: string;
 }
 
 interface Transaction {
-    id: string;
-    bill_id: string;
-    user_id: string;
-    amount_paid: number;
-    payment_reference: string;
-    status: string;
-    paid_at: string; // Updated to string to match backend DateTime
-    bill?: Bill; // Add bill property to Transaction Interface
+  id: string;
+  bill_id: string;
+  user_id: string;
+  amount_paid: number;
+  payment_reference: string;
+  status: string;
+  paid_at: string;
+  bill?: Bill;
 }
 
 const Overview = () => {
-    const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
-    const [totalDue, setTotalDue] = useState(0);
-    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-    const [accessToken, setAccessToken] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);  // New state
-    const [paymentTimeoutId, setPaymentTimeoutId] = useState<NodeJS.Timeout | null>(null); // Timeout ID
+  const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
+  const [totalDue, setTotalDue] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    []
+  );
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [paymentTimeoutId, setPaymentTimeoutId] =
+    useState<NodeJS.Timeout | null>(null);
 
-    const [billDetails, setBillDetails] = useState<{ [billId: string]: Bill }>({}); // State to hold bill details
+  const [billDetails, setBillDetails] = useState<{ [billId: string]: Bill }>(
+    {}
+  );
 
-    // Define a type for payment status icons
-    type PaymentStatusIcons = {
-        [key: string]: {
-            icon: LucideIcon;
-            color: string;
-        };
+  type PaymentStatusIcons = {
+    [key: string]: {
+      icon: LucideIcon;
+      color: string;
     };
+  };
 
-    // Payment Status Icons
-    const paymentStatusIcons: PaymentStatusIcons = {
-        Completed: { icon: CheckCircle, color: 'text-green-500' },
-        Pending: { icon: Clock, color: 'text-yellow-500' },
-        Failed: { icon: AlertTriangle, color: 'text-red-500' },
-    };
+  const paymentStatusIcons: PaymentStatusIcons = {
+    Completed: { icon: CheckCircle, color: "text-green-500" },
+    Pending: { icon: Clock, color: "text-yellow-500" },
+    Failed: { icon: AlertTriangle, color: "text-red-500" },
+  };
 
-    useEffect(() => {
-        const fetchBills = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                // Retrieve access token from localStorage
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    setError('No access token found. Please log in.');
-                    toast.error('No access token found. Please log in.');
-                    return;
-                }
-                setAccessToken(token);
+  const router = useRouter();
 
-                // Fetch Bills
-                const billsResponse = await fetch(`${API_BASE_URL}/bills/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (!billsResponse.ok) {
-                    throw new Error(`HTTP error fetching bills! status: ${billsResponse.status}`);
-                }
-
-                const billsData = await billsResponse.json();
-
-                // Filter bills due in the next 10 days
-                const today = new Date();
-                const tenDaysFromNow = new Date();
-                tenDaysFromNow.setDate(today.getDate() + 10);
-
-                const upcoming = billsData.filter((bill: Bill) => {
-                    const dueDate = parseISO(bill.due_date); // Parse the due date string to a Date object
-                    return isWithinInterval(dueDate, { start: today, end: tenDaysFromNow });
-                });
-
-                setUpcomingBills(upcoming);
-
-                // Calculate total due amount from the filtered bills
-                const total = upcoming.reduce((sum: number, bill: Bill) => {
-                    if (bill.status === 'Pending') {
-                        return sum + bill.amount;
-                    }
-                    return sum;
-                }, 0);
-                setTotalDue(total);
-
-                // Fetch Recent Transactions with Bill details
-                const transactionsResponse = await fetch(`${API_BASE_URL}/payments/history`, { // Updated endpoint
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        
-                    },
-                });
-
-                if (!transactionsResponse.ok) {
-                    console.warn("Failed to fetch transactions.");
-                    setRecentTransactions([]);
-                    toast.error("Failed to fetch transactions.");
-                } else {
-                    let transactionsData: Transaction[] = await transactionsResponse.json();
-                    setRecentTransactions(transactionsData);
-
-                     // Create a map of bill details for easy access
-                     const billMap: { [billId: string]: Bill } = {};
-                     transactionsData.forEach(transaction => {
-                         if (transaction.bill) {
-                             billMap[transaction.bill.id] = transaction.bill;
-                         }
-                     });
-                     setBillDetails(billMap);
-
-                }
-
-            } catch (e: any) {
-                setError(`Failed to fetch data: ${e.message}`);
-                console.error("Error fetching data:", e);
-                setRecentTransactions([]);
-                toast.error(`Failed to fetch data: ${e.message}`);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchBills();
-    }, []);
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                duration: 0.5,
-                when: "beforeChildren",
-                staggerChildren: 0.1
-            }
-        },
-        exit: {
-            opacity: 0,
-            transition: { duration: 0.3 }
+  useEffect(() => {
+    const fetchBills = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          setError("No access token found. Please log in.");
+          toast.error("No access token found. Please log in.");
+          return;
         }
-    };
+        setAccessToken(token);
 
-    const itemVariants = {
-        hidden: { y: 20, opacity: 0 },
-        visible: {
-            y: 0,
-            opacity: 1,
-            transition: { type: "spring", stiffness: 300, damping: 24 }
+        const billsResponse = await fetch(`${API_BASE_URL}/bills/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!billsResponse.ok) {
+          throw new Error(
+            `HTTP error fetching bills! status: ${billsResponse.status}`
+          );
         }
+
+        const billsData = await billsResponse.json();
+
+        const today = new Date();
+        const tenDaysFromNow = new Date();
+        tenDaysFromNow.setDate(today.getDate() + 10);
+
+        const upcoming = billsData.filter((bill: Bill) => {
+          const dueDate = parseISO(bill.due_date);
+          return isWithinInterval(dueDate, {
+            start: today,
+            end: tenDaysFromNow,
+          });
+        });
+
+        setUpcomingBills(upcoming);
+
+        const total = upcoming.reduce((sum: number, bill: Bill) => {
+          if (bill.status === "Pending") {
+            return sum + bill.amount;
+          }
+          return sum;
+        }, 0);
+        setTotalDue(total);
+
+        const transactionsResponse = await fetch(
+          `${API_BASE_URL}/payments/history`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!transactionsResponse.ok) {
+          console.warn("Failed to fetch transactions.");
+          setRecentTransactions([]);
+          toast.error("Failed to fetch transactions.");
+        } else {
+          let transactionsData: Transaction[] =
+            await transactionsResponse.json();
+          setRecentTransactions(transactionsData);
+
+          // Create a map of bill details for easy access
+          const billMap: { [billId: string]: Bill } = {};
+          transactionsData.forEach((transaction) => {
+            if (transaction.bill) {
+              billMap[transaction.bill.id] = transaction.bill;
+            }
+          });
+          setBillDetails(billMap);
+        }
+      } catch (e: any) {
+        setError(`Failed to fetch data: ${e.message}`);
+        console.error("Error fetching data:", e);
+        setRecentTransactions([]);
+        toast.error(`Failed to fetch data: ${e.message}`);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    return (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-            <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Overview</motion.h2>
-           
+    fetchBills();
+  }, []);
 
-            {isLoading ? (
-                <div className="flex items-center justify-center">
-                    <Clock className="animate-spin mr-2" /> Loading data...
-                </div>
-            ) : null}
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
+  };
 
-            {error && <div className="text-red-500 mb-4">Error: {error}</div>}
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
+  };
 
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Calendar className="mr-2" /> Upcoming Bills</h3>
-                {upcomingBills.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="px-4 py-2 text-left text-gray-600">Type</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Due Date</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {upcomingBills.map(bill => (
-                                    <tr key={bill.id} className="border-b">
-                                        <td className="px-4 py-2 text-gray-700">{bill.bill_type}</td>
-                                        <td className="px-4 py-2 text-gray-700">{format(parseISO(bill.due_date), 'PPP')}</td>
-                                        <td className="px-4 py-2 text-gray-700">Ksh {bill.amount}</td>
-                                        <td className="px-4 py-2 text-gray-700">{bill.status}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <p className="text-gray-600">No upcoming bills in the next 10 days.</p>
-                )}
-            </motion.div>
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      {/* Welcome Message */}
+      <motion.div className="mb-6" variants={itemVariants}>
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Welcome back, User!
+        </h2>
+        <p className="text-gray-600">Here's a summary of your bills.</p>
+      </motion.div>
 
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"> <Wallet className="mr-2" /> Total Due Amount</h3>
-                <p className="text-gray-600 font-semibold text-xl">
-                    {totalDue > 0 ? `Ksh ${totalDue}` : 'No bills due in the next 10 days.'}
-                </p>
-            </motion.div>
+      {isLoading ? (
+        <div className="flex items-center justify-center">
+          <Clock className="animate-spin mr-2" /> Loading data...
+        </div>
+      ) : null}
 
-            <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Clock className="mr-2" /> Recent Transactions</h3>
-                {recentTransactions.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="px-4 py-2 text-left text-gray-600">Bill Type</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Date</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
-                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentTransactions.map(transaction => {
-                                    const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
-                                    //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
-                                    const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
-                                    const statusInfo = paymentStatusIcons[transaction.status] || { icon: AlertTriangle, color: 'text-gray-500' };
-                                    const StatusIcon = statusInfo.icon;
+      {error && <div className="text-red-500 mb-4">Error: {error}</div>}
 
-                                    return (
-                                        <tr key={transaction.id} className="border-b">
-                                            <td className="px-4 py-2 text-gray-700">{billType}</td>
-                                            <td className="px-4 py-2 text-gray-700">{formattedDate}</td>
-                                            <td className="px-4 py-2 text-gray-700">Ksh {transaction.amount_paid}</td>
-                                            <td className="px-4 py-2 text-gray-700">
-                                                <div className="flex items-center">
-                                                    <StatusIcon className={`mr-1 w-4 h-4 ${statusInfo.color}`} />
-                                                    {transaction.status}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <p className="text-gray-600">No recent transactions.</p>
-                )}
-            </motion.div>
+      {/* Billing Card */}
+      <motion.div
+        className="bg-gradient-to-br from-blue-900 to-teal-500 text-white rounded-2xl shadow-md p-6 mb-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-xl font-semibold mb-2">Total Due</h3>
+        <p className="text-4xl font-bold">Ksh {totalDue}</p>
+        <p className="text-sm mt-2">Due within the next 10 days.</p>
+      </motion.div>
 
-            <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Payment Reminder Status</h3>
-                <p className="text-gray-600">See if reminders have been sent...</p>
-            </motion.div>
-        </motion.div>
-    );
+      {/* Grid Section for Individual Bills */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        variants={itemVariants}
+      >
+        {upcomingBills.map((bill) => (
+          <motion.div
+            key={bill.id}
+            className="bg-white rounded-md shadow-sm p-4 flex flex-col justify-between"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div>
+              <h4 className="text-lg font-semibold text-gray-700">
+                {bill.bill_type}
+              </h4>
+              <p className="text-gray-600">
+                Due: {format(parseISO(bill.due_date), "PPP")}
+              </p>
+              <p className="text-gray-800 font-bold">Ksh {bill.amount}</p>
+            </div>
+            <button
+              onClick={() => router.push(`/?page=dashboard&ion=manage-bills`)}
+              className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded mt-2"
+            >
+              Pay Now
+            </button>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Recent Transactions Section (moved to the bottom) */}
+      <motion.div
+        className="bg-white shadow-md rounded-md p-4 mt-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center">
+          <Clock className="mr-2" /> Recent Transactions
+        </h3>
+        {recentTransactions.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-4 py-2 text-left text-gray-600">
+                    Bill Type
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600">Date</th>
+                  <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                  <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTransactions.map((transaction) => {
+                  const formattedDate = format(
+                    new Date(transaction.paid_at),
+                    "PPP p"
+                  );
+                  const billType =
+                    transaction.bill?.bill_type || "Unknown Bill Type";
+                  const statusInfo =
+                    paymentStatusIcons[transaction.status] || {
+                      icon: AlertTriangle,
+                      color: "text-gray-500",
+                    };
+                  const StatusIcon = statusInfo.icon;
+
+                  return (
+                    <tr key={transaction.id} className="border-b">
+                      <td className="px-4 py-2 text-gray-700">{billType}</td>
+                      <td className="px-4 py-2 text-gray-700">
+                        {formattedDate}
+                      </td>
+                      <td className="px-4 py-2 text-gray-700">
+                        Ksh {transaction.amount_paid}
+                      </td>
+                      <td className="px-4 py-2 text-gray-700">
+                        <div className="flex items-center">
+                          <StatusIcon
+                            className={`mr-1 w-4 h-4 ${statusInfo.color}`}
+                          />
+                          {transaction.status}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-600">No recent transactions.</p>
+        )}
+      </motion.div>
+    </motion.div>
+  );
 };
 
 export default Overview;
@@ -1554,11 +1578,11 @@ import {
   Calendar,
   AlertTriangle,
   Clock,
-} from "lucide-react"; // Added Plus icon, icon here
+} from "lucide-react";
 import { Transition } from "@headlessui/react";
 import { format, parseISO } from "date-fns";
-import { toast } from "sonner"; // Import toast
-import { ClipLoader } from "react-spinners"; // Import ClipLoader
+import { toast } from "sonner";
+import { ClipLoader } from "react-spinners";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -1577,23 +1601,23 @@ interface Bill {
 const ManageBills = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
-  const [editBillId, setEditBillId] = useState<string | null>(null); // State for edit mode
+  const [editBillId, setEditBillId] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<number>(
     new Date().getMonth()
-  ); // Current month, 0-indexed
+  );
   const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
-  const [isPaying, setIsPaying] = useState(false); // Payment loading state
-  const [payingBillId, setPayingBillId] = useState<string | null>(null); // Track the bill being paid
+  const [isPaying, setIsPaying] = useState(false);
+  const [payingBillId, setPayingBillId] = useState<string | null>(null);
   const [paymentCheckInterval, setPaymentCheckInterval] =
-    useState<NodeJS.Timeout | null>(null); // Interval ID
-  const [selectedBillId, setSelectedBillId] = useState<string | null>(null); //Add a new state
+    useState<NodeJS.Timeout | null>(null);
+  const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
 
   interface BillType {
     value: string;
-    icon: React.ReactNode; // Use React.ReactNode for JSX elements
+    icon: React.ReactNode;
   }
 
   const billTypes: BillType[] = [
@@ -1616,7 +1640,6 @@ const ManageBills = () => {
     },
   ];
 
-  // Function to fetch bills
   const fetchBills = async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -1643,13 +1666,11 @@ const ManageBills = () => {
 
       const data: Bill[] = await response.json();
       setBills(data);
-      console.log("Bills data:", data);
       setShowError(false);
       setError(null);
     } catch (e: any) {
       setShowError(true);
       setError(`Failed to fetch data: ${e.message}`);
-      console.error("Fetch error:", e);
       toast.error(`Failed to fetch data: ${e.message}`);
     }
   };
@@ -1658,7 +1679,6 @@ const ManageBills = () => {
     fetchBills();
   }, []);
 
-  // Update filteredBills whenever bills or selectedMonth changes
   useEffect(() => {
     const filtered = bills.filter((bill) => {
       const billDate = parseISO(bill.due_date);
@@ -1695,7 +1715,7 @@ const ManageBills = () => {
       }
 
       setBills(bills.filter((bill) => bill.id !== billId));
-      await fetchBills(); // Refresh bills after deletion
+      await fetchBills();
       toast.success("Bill deleted successfully!");
     } catch (e: any) {
       setError(`Failed to delete bill: ${e.message}`);
@@ -1710,9 +1730,9 @@ const ManageBills = () => {
 
   // Functions for handling payments
   const handlePayBill = async (billId: string) => {
-    setPayingBillId(billId); // Set the ID of the bill being paid
-    setIsPaying(true); // Start loading
-    setError(null); // Clear any previous errors
+    setPayingBillId(billId);
+    setIsPaying(true);
+    setError(null);
     setSelectedBillId(billId);
 
     try {
@@ -1737,11 +1757,10 @@ const ManageBills = () => {
       if (response.ok) {
         toast.success("Payment initiated. Check your phone for the prompt.");
 
-        // Set up polling to check the payment status
         const intervalId = setInterval(async () => {
-          await fetchBills(); // Refetch bills
-        }, 5000); // Check every 5 seconds
-        setPaymentCheckInterval(intervalId); // Store the interval ID
+          await fetchBills();
+        }, 5000);
+        setPaymentCheckInterval(intervalId);
       } else {
         setError(`Payment failed: ${data.message || "Unknown error"}`);
         toast.error(`Payment failed: ${data.message || "Unknown error"}`);
@@ -1750,21 +1769,17 @@ const ManageBills = () => {
       setError(`An error occurred: ${e.message}`);
       toast.error(`An error occurred: ${e.message}`);
     } finally {
-      //setIsPaying(false); // Ensure loading is stopped even on error //DONT STOP LOADING ON FINALLY
-      //setPayingBillId(null);
       if (!error) {
-        //Only clear if there isnt an error, we want spinner to go on
         if (payingBillId === billId) {
-          // After a certain time, stop checking and clear the loading state (even if there's no definitive answer)
           setTimeout(() => {
             if (paymentCheckInterval) {
               clearInterval(paymentCheckInterval);
               setPaymentCheckInterval(null);
             }
-            setIsPaying(false); // Ensure loading is stopped even on error
+            setIsPaying(false);
             setPayingBillId(null);
-            setSelectedBillId(null); //Clear selected bill ID
-          }, 60000); // After 60 seconds, stop checking
+            setSelectedBillId(null);
+          }, 60000);
         }
       }
     }
@@ -1817,7 +1832,6 @@ const ManageBills = () => {
       setEditBillId(null);
     }
     if (paymentCheckInterval && selectedBillId) {
-      //Added this selectedBillId to only update one element at a time.
       clearInterval(paymentCheckInterval);
       setPaymentCheckInterval(null);
     }
@@ -1840,7 +1854,6 @@ const ManageBills = () => {
       >
         Manage Bills
       </motion.h2>
-      {/* Remove it here  */}
 
       {showError && <div className="text-red-500 mb-4">{error}</div>}
       <>
@@ -1851,12 +1864,12 @@ const ManageBills = () => {
           <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center justify-between">
             <span>Add New Bill</span>
             <button
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center"
+              className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded flex items-center"
               onClick={() => {
-                setEditBillId(null); // Reset editBillId when adding a new bill
+                setEditBillId(null);
                 setIsModalOpen(true);
               }}
-            >
+              >
               <Plus className="h-4 w-4 mr-2 inline-block" />
               Add Bill
             </button>
@@ -1954,7 +1967,7 @@ const ManageBills = () => {
                             <Trash2 className="h-4 w-4" />
                           </button>
                           <button
-                            className={`bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-2 rounded flex items-center ${
+                            className={`bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-2 rounded flex items-center ${
                               isPaying && payingBillId === bill.id
                                 ? "opacity-50 cursor-not-allowed"
                                 : ""
@@ -1966,7 +1979,7 @@ const ManageBills = () => {
                               <ClipLoader color="#ffffff" size={16} />
                             ) : (
                               <>
-                                <DollarSign className="h-4 w-4" />{" "}
+                                <DollarSign className="h-4 w-4" />
                               </>
                             )}
                           </button>
@@ -2010,9 +2023,9 @@ const ManageBills = () => {
                   onClose={() => {
                     setIsModalOpen(false);
                     setEditBillId(null);
-                    fetchBills(); // Refresh bills after closing modal
+                    fetchBills();
                   }}
-                  onBillUpdated={fetchBills} // Callback to refresh bills after update
+                  onBillUpdated={fetchBills}
                   onError={setError}
                   billTypes={billTypes}
                 />
@@ -2025,11 +2038,10 @@ const ManageBills = () => {
   );
 };
 
-// BillFormModal Component (Simplified)
 interface BillFormModalProps {
   editBillId: string | null;
   onClose: () => void;
-  onBillUpdated: () => void; // Callback to refresh bills
+  onBillUpdated: () => void;
   onError: (error: string) => void;
   billTypes: { value: string; icon: React.ReactNode }[];
 }
@@ -2043,20 +2055,13 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
 }) => {
   const [billType, setBillType] = useState("");
   const [amount, setAmount] = useState("");
-  //const [paymentOption, setPaymentOption] = useState(""); //removed payment option
   const [paybillNumber, setPaybillNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [isBillTypeOpen, setIsBillTypeOpen] = useState(false);
-  //const [isPaymentOptionOpen, setIsPaymentOptionOpen] = useState(false); //removed payment option
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
-
-  //const paymentOptions = [
-  //    { value: "paybill", label: "Paybill" },
-  //    //{ value: "till", label: "Till Number" }, // Removed till option
-  //];
 
   useEffect(() => {
     const getToken = async () => {
@@ -2064,12 +2069,10 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         const token = localStorage.getItem("accessToken");
         if (token) {
           setAccessToken(token);
-          console.log("accessToken in BillForm:", token);
         } else {
           console.warn("No access token found in localStorage.");
           onError("Authentication required. Please login.");
           toast.error("Authentication required. Please login.");
-          // router.push("/?page=login"); // Redirect to login
           return;
         }
         setIsLoadingToken(false);
@@ -2091,7 +2094,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
               const billData = await response.json();
               setBillType(billData.bill_type);
               setAmount(billData.amount);
-              //setPaymentOption(billData.payment_option); // Removed payment option
               setPaybillNumber(billData.paybill_number || "");
               setAccountNumber(billData.account_number || "");
               setDueDate(billData.due_date);
@@ -2147,7 +2149,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
       return;
     }
 
-    // Validate Paybill and Account Number
     if (!paybillNumber || !accountNumber) {
       onError("Paybill requires both Paybill Number and Account Number.");
       toast.error("Paybill requires both Paybill Number and Account Number.");
@@ -2160,11 +2161,10 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         : `${API_BASE_URL}/bills/`;
       const method = editBillId ? "PUT" : "POST";
 
-      // Construct the request body.  Only include the relevant payment details.
       const requestBody: any = {
         bill_type: billType,
         amount: amount,
-        payment_option: "paybill", // Always paybill
+        payment_option: "paybill",
         paybill_number: paybillNumber,
         account_number: accountNumber,
         due_date: dueDate,
@@ -2185,7 +2185,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         toast.success(
           editBillId ? "Bill updated successfully!" : "Bill added successfully!"
         );
-        onBillUpdated(); // Notify parent component to refresh bills
+        onBillUpdated();
         onClose();
       } else {
         onError(data.message || "Failed to add bill.");
@@ -2199,12 +2199,11 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
   };
 
   const handleCancel = () => {
-    onClose(); // Close the modal
+    onClose();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Bill Type */}
       <div>
         <label
           className="block text-gray-700 text-sm font-bold mb-2"
@@ -2215,7 +2214,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         <div className="relative">
           <button
             type="button"
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between"
+            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none flex items-center justify-between"
             onClick={() => setIsBillTypeOpen(!isBillTypeOpen)}
           >
             {billType || "Select Bill Type"}
@@ -2249,7 +2248,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         </div>
       </div>
 
-      {/* Amount */}
       <div>
         <label
           className="block text-gray-700 text-sm font-bold mb-2"
@@ -2258,7 +2256,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
           Amount
         </label>
         <input
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+          className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none"
           id="amount"
           type="number"
           placeholder="Enter Amount"
@@ -2267,7 +2265,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         />
       </div>
 
-      {/* Paybill Fields */}
       <div>
         <label
           className="block text-gray-700 text-sm font-bold mb-2"
@@ -2276,7 +2273,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
           Paybill Number (Business Number)
         </label>
         <input
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+          className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none"
           id="paybillNumber"
           type="text"
           placeholder="Enter Paybill Number"
@@ -2292,7 +2289,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
           Account Number
         </label>
         <input
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+          className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none"
           id="accountNumber"
           type="text"
           placeholder="Enter Account Number"
@@ -2301,7 +2298,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         />
       </div>
 
-      {/* Due Date */}
       <div>
         <label
           className="block text-gray-700 text-sm font-bold mb-2"
@@ -2310,7 +2306,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
           Due Date
         </label>
         <input
-          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#9C27B0] focus:border-transparent transition-all duration-200 outline-none"
+          className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-200 focus:border-transparent transition-all duration-200 outline-none"
           id="dueDate"
           type="date"
           value={dueDate}
@@ -2318,7 +2314,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         />
       </div>
 
-      {/* Submit & Cancel Buttons */}
       <div className="flex justify-end space-x-4">
         <button
           type="button"
@@ -2329,7 +2324,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
         </button>
         <button
           type="submit"
-          className="bg-gradient-to-r from-[#E91E63] to-[#9C27B0] text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center shadow-lg shadow-purple-200/50 hover:shadow-purple-300/50 transition-all duration-300"
+          className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2.5 px-5 rounded-md shadow-md transition-colors duration-300"
         >
           {isEditMode ? "Update Bill" : "Add Bill"}
         </button>
@@ -2339,7 +2334,6 @@ const BillFormModal: React.FC<BillFormModalProps> = ({
 };
 
 export default ManageBills;
-
 ================================================================================
 File: ./app/layout.tsx
 ================================================================================
@@ -2377,86 +2371,82 @@ export default function RootLayout({
 ================================================================================
 File: ./app/page.tsx
 ================================================================================
-// File: ./app/page.tsx
 // app/page.tsx
-'use client';
+"use client";
 
-import { useSearchParams, useRouter } from 'next/navigation';
-import Auth from '@/components/Auth';
-import BillForm from '@/components/BillForm';
-import DashboardLayout from '@/components/DashboardLayout';
-import Overview from '@/components/dashboard/Overview';
-import ManageBills from '@/components/dashboard/ManageBills';
-import Notifications from '@/components/dashboard/Notifications';
-import WelcomeScreen from '@/components/WelcomeScreen';
+import { useSearchParams, useRouter } from "next/navigation";
+import Auth from "@/components/Auth";
+import BillForm from "@/components/BillForm";
+import NavBar from "@/components/NavBar";
+import Dashboard from "@/components/Dashboard";
+import WelcomeScreen from "@/components/WelcomeScreen";
 import { useEffect, useState } from "react";
-import { Clock } from 'lucide-react'; // Import Clock icon
-
+import { Clock } from "lucide-react";
 
 export default function HomePage() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const page = searchParams.get('page') || 'login';
-    const userId = searchParams.get('userId') || '';
-    const dashboardSection = searchParams.get('ion') || 'overview'; // Corrected name
-    const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
-    const [isLoading, setIsLoading] = useState(true); // Add a loading state
-    const editBillId = searchParams.get('edit');
-    const [checkoutRequestID, setCheckoutRequestID] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const page = searchParams.get("page") || "login";
+  const userId = searchParams.get("userId") || "";
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const editBillId = searchParams.get("edit");
+  const [checkoutRequestID, setCheckoutRequestID] =
+    useState<string | null>(null);
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const storedValue = localStorage.getItem('isFirstTimeUser');
-            setIsFirstTimeUser(storedValue === 'true');
-            // Get checkout request id from the URL if present
-            const checkout = searchParams.get('checkout');
-            if (checkout) {
-                setCheckoutRequestID(checkout);
-            }
-        }
-        setIsLoading(false); // Set loading to false after attempting to retrieve the value
-    }, [searchParams]);
+  useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    setIsAuthenticated(!!accessToken);
 
-    const renderDashboardSection = () => {
-        switch (dashboardSection) {
-            case 'overview':
-                return <Overview />;
-            case 'manage-bills':
-                return <ManageBills />;
-            case 'notifications':
-                return <Notifications />;
-            default:
-                return <Overview />;
-        }
-    };
+    const storedValue = localStorage.getItem("isFirstTimeUser");
+    setIsFirstTimeUser(storedValue === "true");
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Clock className="animate-spin mr-2" /> Loading...
-            </div>
-        ); // Show a loading indicator while checking localStorage
+    const checkout = searchParams.get("checkout");
+    if (checkout) {
+      setCheckoutRequestID(checkout);
     }
 
-    if (page === 'dashboard') {
-        return (
-            <DashboardLayout key={dashboardSection}> {/* Key Prop Here! */}
-                {renderDashboardSection()}
-                {checkoutRequestID && (
-                    <div>
-                        <p>M-Pesa payment initiated. Check your phone for the prompt.</p>
-                        <p>Checkout Request ID: {checkoutRequestID}</p>
-                        {/* You might want to add a button to check the payment status later */}
-                    </div>
-                )}
-            </DashboardLayout>
-        );
-    } else if (page === 'billForm') {
-        return <BillForm userId={userId} editBillId={editBillId || null} />;
-    } else if (page === 'welcome') {
-        return <WelcomeScreen />;
-    } else {
-        return <Auth initialRoute={page as 'login' | 'register' | 'billForm' | 'dashboard' | 'welcome'} />;
-    }
+    setIsLoading(false);
+  }, [searchParams]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <Clock className="animate-spin mr-2" /> Loading...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Auth initialRoute={page as "login" | "register"} />;
+  }
+
+  //Crucial: Correctly use the isFirstTimeUser value and remove item when navigating away
+  if (isFirstTimeUser === true && page === "welcome") {
+    return <WelcomeScreen />;
+  }
+
+  //Conditionally render navbar
+  const shouldShowNavBar = !(isFirstTimeUser === true && page === "billForm");
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      {shouldShowNavBar && <NavBar />}
+      <div className="flex-1 p-6">
+        {page === "billForm" ? (
+          <BillForm userId={userId} editBillId={editBillId || null} />
+        ) : (
+          <Dashboard />
+        )}
+        {checkoutRequestID && (
+          <div>
+            <p>M-Pesa payment initiated. Check your phone for the prompt.</p>
+            <p>Checkout Request ID: {checkoutRequestID}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 ================================================================================
