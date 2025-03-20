@@ -55,6 +55,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("userName", data.user.full_name); // Store the user's name
 
         // Extract is_new_user from the response
         const isNewUser = data.is_new_user;
@@ -101,6 +102,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       if (response.ok) {
         const accessToken = data.access_token; // Extract token
         localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("userName", data.user.full_name); // Store the user's name
 
         // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;

@@ -1,7 +1,6 @@
-# routes/auth_routes.py
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, User, user_schema
+from models import db, User, user_schema, UserSchema
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
 import datetime
 
@@ -34,7 +33,8 @@ class Register(Resource):
 
         access_token = create_access_token(identity=new_user.id, expires_delta=datetime.timedelta(days=1))
         #ADD is_new_user=True here, for initial redirect
-        return jsonify({"message": "User registered successfully", "user": user_schema.dump(new_user), "access_token": access_token, "is_new_user": True})
+        user_data = UserSchema().dump(new_user)
+        return jsonify({"message": "User registered successfully", "user": user_data, "access_token": access_token, "is_new_user": True})
 
 class Login(Resource):
     def post(self):
@@ -47,8 +47,9 @@ class Login(Resource):
             return {"message": "Invalid credentials"}, 401
 
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
+        user_data = UserSchema().dump(user)
         #ADD THIS LINE:
-        return jsonify({"access_token": access_token, "is_new_user": False}) #  Return new user status
+        return jsonify({"access_token": access_token, "is_new_user": False, "user": user_data}) #  Return new user status
 
 class Logout(Resource):
     @jwt_required()

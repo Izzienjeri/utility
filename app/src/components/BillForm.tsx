@@ -36,6 +36,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);  // NEW STATE
 
   const billTypes = [
     {
@@ -118,6 +119,43 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     }
   }, [router, editBillId]);
 
+  // NEW FUNCTION: CREATE RECURRING BILLS
+  const createRecurringBills = async (baseBill: any, token: string) => {
+    const billsToCreate = [];
+    let nextDueDate = new Date(baseBill.due_date);
+
+    for (let i = 1; i <= 11; i++) {  // Create for next 11 months
+      nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+      const newBill = {
+        ...baseBill,
+        due_date: nextDueDate.toISOString().split('T')[0], // Format to YYYY-MM-DD
+      };
+      billsToCreate.push(newBill);
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/bills/`, {  // Use the SAME endpoint.  Backend handles array.
+        method: 'POST', // Backend needs to accept an array of bills here!
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(billsToCreate), // Send the array to the backend
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Bill and recurring bills added successfully!");
+      } else {
+        toast.error(data.message || "Failed to add recurring bills.");
+      }
+    } catch (err) {
+      toast.error("An error occurred while adding the recurring bills.");
+      console.error(err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -184,6 +222,12 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
 
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
+
+        // NEW: Create recurring bills if toggled
+        if (isRecurring && !editBillId) { // Don't create recurring on edits
+          await createRecurringBills(requestBody, accessToken); // Pass the base bill
+        }
+
       } else {
         toast.error(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -405,6 +449,22 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
+                </motion.div>
+
+                {/* NEW: Recurring Bill Toggle */}
+                <motion.div className="mb-3" variants={itemVariants}>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="mr-2 h-5 w-5 text-teal-500 focus:ring-teal-300"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      disabled={isEditMode} // Disable on edit
+                    />
+                    <span className="text-gray-200 text-sm font-medium">
+                      Create Recurring Bills (Next 11 Months)
+                    </span>
+                  </label>
                 </motion.div>
 
                 <motion.div

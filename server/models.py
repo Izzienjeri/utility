@@ -89,7 +89,7 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
 class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
-        load_instance = True
+        load_instance = False
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
