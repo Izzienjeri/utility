@@ -31,16 +31,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             icon: Wallet,
         },
         {
-            name: "Payment History & Analytics",
-            href: "/?page=dashboard&ion=payment-history",
-            icon: BarChart,
-        },
-        {
             name: "Notifications & Reminders",
             href: "/?page=dashboard&ion=notifications",
             icon: Bell,
         },
-        { name: "Settings", href: "/?page=dashboard&ion=settings", icon: Settings },
     ];
 
     const handleLogout = () => {
@@ -86,6 +80,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             >
                 <div className="p-4">
                     <h1 className="text-2xl font-bold text-gray-800 mb-4">BillEase</h1>
+                     
                     <nav>
                         {navigation.map((item) => (
                             <motion.a

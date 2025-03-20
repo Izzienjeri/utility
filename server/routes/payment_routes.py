@@ -1,6 +1,4 @@
 # routes/payment_routes.py
-# routes/payment_routes.py
-
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, Payment, Bill, User, payment_schema, payments_schema, PaymentWithBillSchema  # Import the new schema
@@ -40,7 +38,7 @@ class PaymentResource(Resource):
              phone_number = "254" + phone_number  #Add 254 if it starts with 7
 
         logging.debug(f"Formatted Phone Number: {phone_number}")
-        response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option)  # Pass payment_option to initiate_mpesa_payment
+        response = initiate_mpesa_payment(bill.amount, phone_number)  
 
         # Only create payment record if STK push was initiated successfully
         if response.get("status") == "success":
@@ -75,7 +73,7 @@ class MpesaCallbackResource(Resource):
         Handles the callback from M-Pesa after a transaction.
         """
         callback_data = request.get_json()
-        print("M-Pesa Callback Data:", callback_data)
+        logging.info("M-Pesa Callback Data Received: %s", callback_data)  # Log the entire callback
 
         # Extract relevant information from the callback
         try:
@@ -84,22 +82,23 @@ class MpesaCallbackResource(Resource):
             result_desc = callback_data['Body']['stkCallback']['ResultDesc']
 
             # **NEW: Extract the M-Pesa transaction code (adapt the path!)**
+            mpesa_receipt_number = None
             try:
-                mpesa_receipt_number = None
                 for item in callback_data['Body']['stkCallback']['CallbackMetadata']['Item']:
                     if item['Name'] == 'MpesaReceiptNumber':
                         mpesa_receipt_number = item['Value']
                         break
                 #mpesa_receipt_number = callback_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] # Assuming it's the second item; adapt if needed
             except (KeyError, TypeError) as e:
-                print(f"Error extracting MpesaReceiptNumber: {e}")
-                mpesa_receipt_number = None  # Handle the case where it's not found
+                logging.warning(f"MpesaReceiptNumber not found in callback data: {e}")
+                #print(f"Error extracting MpesaReceiptNumber: {e}") #remove print statements
+                #mpesa_receipt_number = None  # Handle the case where it's not found # keep this
 
             # Find the payment by CheckoutRequestID
             payment = Payment.query.filter_by(payment_reference=checkout_request_id).first()
 
             if not payment:
-                print(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
+                logging.error(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
                 return {"message": "Payment not found"}, 404
 
             if result_code == 0:
@@ -111,25 +110,44 @@ class MpesaCallbackResource(Resource):
                     payment.mpesa_receipt_number = mpesa_receipt_number # Store in new field
                     payment.payment_reference = mpesa_receipt_number
                 else:
-                    print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
+                    logging.info("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
+                    #print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.") #remove print statements
 
                 #Update the bill
                 bill = Bill.query.filter_by(id=payment.bill_id).first()
-                bill.status = "Paid"
+                if bill: #check to make sure bill exists
+                    bill.status = "Paid"
+                else:
+                    logging.error(f"Bill with ID {payment.bill_id} not found.") #log bill not found
+                    return {"message": f"Bill with ID {payment.bill_id} not found"}, 404
+
+                try:
+                    db.session.commit()
+                    logging.info(f"Payment {payment.id} and Bill {bill.id if bill else 'N/A'} updated successfully.")
+                    #Include the bill id in the response
+                    return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  # Send the bill_id back
+                except Exception as e:
+                    logging.error(f"Database commit error: {e}")
+                    db.session.rollback() # Rollback in case of error!
+                    return {"message": "Database commit error", "error": str(e)}, 500
 
 
-                db.session.commit()
-                #Include the bill id in the response
-                return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  # Send the bill_id back
             else:
                 # Payment failed or was cancelled
                 payment.status = "Failed"
-                db.session.commit()
-                print(f"Payment failed: {result_desc}")
+                try:
+                    db.session.commit()
+                    logging.info(f"Payment {payment.id} marked as Failed.")
+                except Exception as e:
+                    logging.error(f"Database commit error: {e}")
+                    db.session.rollback() # Rollback in case of error!
+                    return {"message": "Database commit error", "error": str(e)}, 500
+                #db.session.commit() #committing here already so no need
+                logging.error(f"Payment failed: {result_desc}")
                 return {"message": f"Payment failed: {result_desc}"}, 400
 
         except (KeyError, TypeError) as e:
-            print(f"Error processing M-Pesa callback: {e}")
+            logging.error(f"Error processing M-Pesa callback: {e}")
             return {"message": "Invalid callback data"}, 400
 
 api.add_resource(PaymentResource, "/pay")

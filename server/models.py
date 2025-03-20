@@ -47,9 +47,9 @@ class Bill(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    paybill_number = db.Column(db.String(50), nullable=True) #Paybill Number
-    account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
+    payment_option = db.Column(db.String(50), nullable=False, default="paybill")  #'paybill' enforced
+    paybill_number = db.Column(db.String(50), nullable=False) #Paybill Number enforce not null
+    account_number = db.Column(db.String(50), nullable=False)  # Account Number (for Paybill) enforce not null
     due_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -90,7 +90,6 @@ class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
-
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:

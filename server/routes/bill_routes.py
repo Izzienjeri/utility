@@ -19,33 +19,34 @@ class BillListResource(Resource):
         user_id = get_jwt_identity()
         logging.debug(f"Received bill data: {data}")
 
+        # Validate required fields (bill_schema validation isn't sufficient)
+        if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
+            return {"message": "Missing required fields"}, 400
+
         errors = bill_schema.validate(data)
         if errors:
             logging.debug(f"Validation errors: {errors}")
             return {"errors": errors}, 400
 
-        payment_option = data.get("payment_option")
+        # Enforce paybill payment option, always
+        data["payment_option"] = "paybill"
+
+        # Validation: Check if only paybill number and account number are provided
         paybill_number = data.get("paybill_number")
         account_number = data.get("account_number")
 
-        if payment_option == "paybill":
-            if not paybill_number or not account_number:
-                return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-
-        else:
-            return {"message": "Invalid payment option"}, 400
+        if not paybill_number or not account_number:
+            return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
 
         new_bill = Bill()
         new_bill.user_id = user_id
         new_bill.bill_type = data["bill_type"]
         new_bill.amount = data["amount"]
-        new_bill.payment_option = payment_option
+        new_bill.payment_option = "paybill" # Enforce paybill
+        new_bill.paybill_number = paybill_number
+        new_bill.account_number = account_number
         new_bill.due_date = data["due_date"]
         new_bill.status = "Pending"
-
-        if payment_option == "paybill":
-            new_bill.paybill_number = paybill_number
-            new_bill.account_number = account_number
 
 
         db.session.add(new_bill)
@@ -87,24 +88,27 @@ class BillResource(Resource):
         if not bill:
             return {"message": "Bill not found or unauthorized"}, 404
 
+        # Validate required fields (bill_schema validation isn't sufficient)
+        if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
+            return {"message": "Missing required fields"}, 400
+
         errors = bill_schema.validate(data)
         if errors:
             return {"errors": errors}, 400
 
-        payment_option = data.get("payment_option")
+         # Enforce paybill payment option, always
+        data["payment_option"] = "paybill"
+
         paybill_number = data.get("paybill_number")
         account_number = data.get("account_number")
 
-        if payment_option == "paybill":
-            if not paybill_number or not account_number:
-                return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
+        if not paybill_number or not account_number:
+            return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
 
-        else:
-            return {"message": "Invalid payment option"}, 400
 
         bill.bill_type = data["bill_type"]
         bill.amount = data["amount"]
-        bill.payment_option = payment_option
+        bill.payment_option = "paybill"  # Enforce paybill
         bill.paybill_number = paybill_number
         bill.account_number = account_number
         bill.due_date = data["due_date"]

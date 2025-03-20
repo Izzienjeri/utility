@@ -8,9 +8,7 @@ import BillForm from '@/components/BillForm';
 import DashboardLayout from '@/components/DashboardLayout';
 import Overview from '@/components/dashboard/Overview';
 import ManageBills from '@/components/dashboard/ManageBills';
-import PaymentHistory from '@/components/dashboard/PaymentHistory';
 import Notifications from '@/components/dashboard/Notifications';
-import Settings from '@/components/dashboard/Settings';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useEffect, useState } from "react";
 import { Clock } from 'lucide-react'; // Import Clock icon
@@ -31,11 +29,11 @@ export default function HomePage() {
         if (typeof window !== 'undefined') {
             const storedValue = localStorage.getItem('isFirstTimeUser');
             setIsFirstTimeUser(storedValue === 'true');
-             // Get checkout request id from the URL if present
+            // Get checkout request id from the URL if present
             const checkout = searchParams.get('checkout');
-             if (checkout) {
-                  setCheckoutRequestID(checkout);
-              }
+            if (checkout) {
+                setCheckoutRequestID(checkout);
+            }
         }
         setIsLoading(false); // Set loading to false after attempting to retrieve the value
     }, [searchParams]);
@@ -46,12 +44,8 @@ export default function HomePage() {
                 return <Overview />;
             case 'manage-bills':
                 return <ManageBills />;
-            case 'payment-history':
-                return <PaymentHistory />;
             case 'notifications':
                 return <Notifications />;
-            case 'settings':
-                return <Settings />;
             default:
                 return <Overview />;
         }
@@ -79,7 +73,7 @@ export default function HomePage() {
             </DashboardLayout>
         );
     } else if (page === 'billForm') {
-         return <BillForm userId={userId} editBillId={editBillId || null} />;
+        return <BillForm userId={userId} editBillId={editBillId || null} />;
     } else if (page === 'welcome') {
         return <WelcomeScreen />;
     } else {

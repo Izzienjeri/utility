@@ -7,88 +7,58 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+MPESA_API_URL = "https://sandbox.safaricom.co.ke"
+
 def get_mpesa_access_token():
-    """
-    Retrieves a fresh access token from the M-Pesa API.
-    """
     consumer_key = os.getenv("MPESA_CONSUMER_KEY")
     consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
-
-    api_URL = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-
-    # Safaricom expects the credentials to be base64 encoded
-    encoded_string = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode('utf-8')).decode('utf-8')
-
-    headers = {"Authorization": f"Basic {encoded_string}"}
+    api_url = f"{MPESA_API_URL}/oauth/v1/generate?grant_type=client_credentials"
+    encoded_credentials = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
 
     try:
-        r = requests.get(api_URL, headers=headers)
-        r.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        json_response = r.json()
-        print("M-Pesa API Response:", json_response)  # Debugging
-        return json_response.get("access_token")
+        response = requests.get(api_url, headers={"Authorization": f"Basic {encoded_credentials}"})
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        return response.json().get("access_token")
     except requests.exceptions.RequestException as e:
-        print(f"M-Pesa Access Token Error: {e}")
+        logging.error(f"M-Pesa Access Token Error: {e}")
         return None
 
-
-def initiate_mpesa_payment(amount, phone_number, payment_option):
-    """
-    Initiates an STK Push payment request to M-Pesa.
-    Now uses same shortcode for Paybill and Till Number, differentiating by TransactionType.
-    """
+def initiate_mpesa_payment(amount, phone_number):
     access_token = get_mpesa_access_token()
     if not access_token:
         return {"status": "failed", "message": "Failed to obtain M-Pesa access token."}
 
-    mpesa_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE") # Same for Paybill and Till
+    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE")
     passkey = os.getenv("MPESA_PASSKEY")
     callback_url = os.getenv("MPESA_CALLBACK_URL")
-
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    password = base64.b64encode(str(business_shortcode + passkey + timestamp).encode()).decode()
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
+    password = base64.b64encode(f"{business_shortcode}{passkey}{timestamp}".encode()).decode()
 
     payload = {
         "BusinessShortCode": business_shortcode,
         "Password": password,
         "Timestamp": timestamp,
-        "Amount": int(amount),  # Amount must be an integer
-        "PartyA": phone_number,  # Customer phone number
-        "PartyB": business_shortcode,  # Your paybill number, same as BusinessShortCode in sandbox
-        "PhoneNumber": phone_number,  # Customer phone number
-        "CallBackURL": callback_url,  # Your callback URL
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": int(amount),
+        "PartyA": phone_number,
+        "PartyB": business_shortcode,
+        "PhoneNumber": phone_number,
+        "CallBackURL": callback_url,
+        "AccountReference": "Bill Payment",
         "TransactionDesc": "Payment of Utility Bill"
     }
 
-    if payment_option == "paybill":
-        payload["TransactionType"] = "CustomerPayBillOnline"
-        payload["AccountReference"] = "Bill Payment"  # Required for Paybill
-
-    else:
-        return {"status": "failed", "message": "Invalid payment option"}
-
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
     try:
-        response = requests.post(mpesa_url, json=payload, headers=headers)
+        response = requests.post(f"{MPESA_API_URL}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
-        print("M-Pesa STK Push Response:", json_response)  # Debugging
-                #Log the transaction type and payload
-        logging.debug(f"M-Pesa Transaction Type: {payload.get('TransactionType')}")
         logging.debug(f"M-Pesa STK Push Payload: {payload}")
-
-
-        #if json_response.get("ResponseCode") == "00": #Old Code With Error
-        if json_response.get("ResponseCode") == "0":
-            return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage"), "ResponseCode": json_response.get("ResponseCode")}
-        else:
-            return {"status": "failed", "message": json_response.get("ResponseDescription")}
-
+        return {
+            "status": "success" if json_response.get("ResponseCode") == "0" else "failed",
+            "message": json_response.get("CustomerMessage", json_response.get("ResponseDescription")),
+            "CheckoutRequestID": json_response.get("CheckoutRequestID")
+        }
     except requests.exceptions.RequestException as e:
-        print(f"M-Pesa STK Push Error: {e}")
+        logging.error(f"M-Pesa STK Push Error: {e}")
         return {"status": "failed", "message": str(e)}

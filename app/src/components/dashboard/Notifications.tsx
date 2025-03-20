@@ -33,6 +33,9 @@ const Notifications = () => {
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Notifications & Reminders</motion.h2>
+              <p className="text-gray-600 mt-2 text-center">
+                  *We currently only support Paybill payments.*
+              </p>
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
                 <h3 className="text-lg font-medium mb-2 text-gray-700">View Reminders</h3>
                 <p className="text-gray-600">See upcoming email reminders...</p>

@@ -52,10 +52,9 @@ class Bill(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    #till_number = db.Column(db.String(50), nullable=True)  # Till Number //Removed till number
-    paybill_number = db.Column(db.String(50), nullable=True) #Paybill Number
-    account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
+    payment_option = db.Column(db.String(50), nullable=False, default="paybill")  #'paybill' enforced
+    paybill_number = db.Column(db.String(50), nullable=False) #Paybill Number enforce not null
+    account_number = db.Column(db.String(50), nullable=False)  # Account Number (for Paybill) enforce not null
     due_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -96,8 +95,6 @@ class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
-        #fields = ("id", "user_id", "bill_type", "amount", "payment_option", "paybill_number", "account_number", "due_date", "status", "created_at") # Include all fields for serialization
-        exclude = ("till_number",) #removed till number
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -153,7 +150,6 @@ class Config:
     MPESA_BUSINESS_SHORTCODE = os.getenv('MPESA_BUSINESS_SHORTCODE')  # Paybill 174379 (Test)
     MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
     MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')  # STK Passkey
-
 
 
 ========================================
@@ -413,8 +409,6 @@ routes/payment_routes.py
 ========================================
 
 # routes/payment_routes.py
-# routes/payment_routes.py
-
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
 from models import db, Payment, Bill, User, payment_schema, payments_schema, PaymentWithBillSchema  # Import the new schema
@@ -454,7 +448,7 @@ class PaymentResource(Resource):
              phone_number = "254" + phone_number  #Add 254 if it starts with 7
 
         logging.debug(f"Formatted Phone Number: {phone_number}")
-        response = initiate_mpesa_payment(bill.amount, phone_number, bill.payment_option)  # Pass payment_option to initiate_mpesa_payment
+        response = initiate_mpesa_payment(bill.amount, phone_number)  
 
         # Only create payment record if STK push was initiated successfully
         if response.get("status") == "success":
@@ -489,7 +483,7 @@ class MpesaCallbackResource(Resource):
         Handles the callback from M-Pesa after a transaction.
         """
         callback_data = request.get_json()
-        print("M-Pesa Callback Data:", callback_data)
+        logging.info("M-Pesa Callback Data Received: %s", callback_data)  # Log the entire callback
 
         # Extract relevant information from the callback
         try:
@@ -498,22 +492,23 @@ class MpesaCallbackResource(Resource):
             result_desc = callback_data['Body']['stkCallback']['ResultDesc']
 
             # **NEW: Extract the M-Pesa transaction code (adapt the path!)**
+            mpesa_receipt_number = None
             try:
-                mpesa_receipt_number = None
                 for item in callback_data['Body']['stkCallback']['CallbackMetadata']['Item']:
                     if item['Name'] == 'MpesaReceiptNumber':
                         mpesa_receipt_number = item['Value']
                         break
                 #mpesa_receipt_number = callback_data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] # Assuming it's the second item; adapt if needed
             except (KeyError, TypeError) as e:
-                print(f"Error extracting MpesaReceiptNumber: {e}")
-                mpesa_receipt_number = None  # Handle the case where it's not found
+                logging.warning(f"MpesaReceiptNumber not found in callback data: {e}")
+                #print(f"Error extracting MpesaReceiptNumber: {e}") #remove print statements
+                #mpesa_receipt_number = None  # Handle the case where it's not found # keep this
 
             # Find the payment by CheckoutRequestID
             payment = Payment.query.filter_by(payment_reference=checkout_request_id).first()
 
             if not payment:
-                print(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
+                logging.error(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
                 return {"message": "Payment not found"}, 404
 
             if result_code == 0:
@@ -525,25 +520,44 @@ class MpesaCallbackResource(Resource):
                     payment.mpesa_receipt_number = mpesa_receipt_number # Store in new field
                     payment.payment_reference = mpesa_receipt_number
                 else:
-                    print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
+                    logging.info("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
+                    #print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.") #remove print statements
 
                 #Update the bill
                 bill = Bill.query.filter_by(id=payment.bill_id).first()
-                bill.status = "Paid"
+                if bill: #check to make sure bill exists
+                    bill.status = "Paid"
+                else:
+                    logging.error(f"Bill with ID {payment.bill_id} not found.") #log bill not found
+                    return {"message": f"Bill with ID {payment.bill_id} not found"}, 404
+
+                try:
+                    db.session.commit()
+                    logging.info(f"Payment {payment.id} and Bill {bill.id if bill else 'N/A'} updated successfully.")
+                    #Include the bill id in the response
+                    return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  # Send the bill_id back
+                except Exception as e:
+                    logging.error(f"Database commit error: {e}")
+                    db.session.rollback() # Rollback in case of error!
+                    return {"message": "Database commit error", "error": str(e)}, 500
 
 
-                db.session.commit()
-                #Include the bill id in the response
-                return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  # Send the bill_id back
             else:
                 # Payment failed or was cancelled
                 payment.status = "Failed"
-                db.session.commit()
-                print(f"Payment failed: {result_desc}")
+                try:
+                    db.session.commit()
+                    logging.info(f"Payment {payment.id} marked as Failed.")
+                except Exception as e:
+                    logging.error(f"Database commit error: {e}")
+                    db.session.rollback() # Rollback in case of error!
+                    return {"message": "Database commit error", "error": str(e)}, 500
+                #db.session.commit() #committing here already so no need
+                logging.error(f"Payment failed: {result_desc}")
                 return {"message": f"Payment failed: {result_desc}"}, 400
 
         except (KeyError, TypeError) as e:
-            print(f"Error processing M-Pesa callback: {e}")
+            logging.error(f"Error processing M-Pesa callback: {e}")
             return {"message": "Invalid callback data"}, 400
 
 api.add_resource(PaymentResource, "/pay")
@@ -576,43 +590,35 @@ class BillListResource(Resource):
         user_id = get_jwt_identity()
         logging.debug(f"Received bill data: {data}")
 
+        # Validate required fields (bill_schema validation isn't sufficient)
+        if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
+            return {"message": "Missing required fields"}, 400
+
         errors = bill_schema.validate(data)
         if errors:
             logging.debug(f"Validation errors: {errors}")
             return {"errors": errors}, 400
 
-        # Validation: Check if only one of till_number or paybill_number is provided
-        payment_option = data.get("payment_option")
+        # Enforce paybill payment option, always
+        data["payment_option"] = "paybill"
+
+        # Validation: Check if only paybill number and account number are provided
         paybill_number = data.get("paybill_number")
-        #till_number = data.get("till_number") //Removed till number
         account_number = data.get("account_number")
 
-        if payment_option == "paybill":
-            if not paybill_number or not account_number:
-                return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            #if till_number: //Removed till number
-                #return {"message": "Paybill should not have a Till Number"}, 400
-        #elif payment_option == "till": //Removed till number
-           # if not till_number:
-              #  return {"message": "Till requires a Till Number"}, 400
-            #if paybill_number or account_number:
-              #  return {"message": "Till should not have Paybill or Account Number"}, 400
-        else:
-            return {"message": "Invalid payment option"}, 400
+        if not paybill_number or not account_number:
+            return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
 
         new_bill = Bill()
         new_bill.user_id = user_id
         new_bill.bill_type = data["bill_type"]
         new_bill.amount = data["amount"]
-        new_bill.payment_option = payment_option
+        new_bill.payment_option = "paybill" # Enforce paybill
+        new_bill.paybill_number = paybill_number
+        new_bill.account_number = account_number
         new_bill.due_date = data["due_date"]
         new_bill.status = "Pending"
 
-        if payment_option == "paybill":
-            new_bill.paybill_number = paybill_number
-            new_bill.account_number = account_number
-        #elif payment_option == "till": //Removed till number
-          #  new_bill.till_number = till_number
 
         db.session.add(new_bill)
         db.session.commit()
@@ -653,33 +659,28 @@ class BillResource(Resource):
         if not bill:
             return {"message": "Bill not found or unauthorized"}, 404
 
+        # Validate required fields (bill_schema validation isn't sufficient)
+        if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
+            return {"message": "Missing required fields"}, 400
+
         errors = bill_schema.validate(data)
         if errors:
             return {"errors": errors}, 400
 
-        payment_option = data.get("payment_option")
+         # Enforce paybill payment option, always
+        data["payment_option"] = "paybill"
+
         paybill_number = data.get("paybill_number")
-        #till_number = data.get("till_number") //Removed till number
         account_number = data.get("account_number")
 
-        if payment_option == "paybill":
-            if not paybill_number or not account_number:
-                return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            #if till_number: //Removed till number
-             #   return {"message": "Paybill should not have a Till Number"}, 400
-       # elif payment_option == "till": //Removed till number
-           # if not till_number:
-              #  return {"message": "Till requires a Till Number"}, 400
-           # if paybill_number or account_number:
-             #   return {"message": "Till should not have Paybill or Account Number"}, 400
-        else:
-            return {"message": "Invalid payment option"}, 400
+        if not paybill_number or not account_number:
+            return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
+
 
         bill.bill_type = data["bill_type"]
         bill.amount = data["amount"]
-        bill.payment_option = payment_option
+        bill.payment_option = "paybill"  # Enforce paybill
         bill.paybill_number = paybill_number
-        #bill.till_number = till_number  //Removed till number
         bill.account_number = account_number
         bill.due_date = data["due_date"]
 
@@ -704,91 +705,59 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+MPESA_API_URL = "https://sandbox.safaricom.co.ke"
+
 def get_mpesa_access_token():
-    """
-    Retrieves a fresh access token from the M-Pesa API.
-    """
     consumer_key = os.getenv("MPESA_CONSUMER_KEY")
     consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
-
-    api_URL = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-
-    # Safaricom expects the credentials to be base64 encoded
-    encoded_string = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode('utf-8')).decode('utf-8')
-
-    headers = {"Authorization": f"Basic {encoded_string}"}
+    api_url = f"{MPESA_API_URL}/oauth/v1/generate?grant_type=client_credentials"
+    encoded_credentials = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
 
     try:
-        r = requests.get(api_URL, headers=headers)
-        r.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        json_response = r.json()
-        print("M-Pesa API Response:", json_response)  # Debugging
-        return json_response.get("access_token")
+        response = requests.get(api_url, headers={"Authorization": f"Basic {encoded_credentials}"})
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        return response.json().get("access_token")
     except requests.exceptions.RequestException as e:
-        print(f"M-Pesa Access Token Error: {e}")
+        logging.error(f"M-Pesa Access Token Error: {e}")
         return None
 
-
-def initiate_mpesa_payment(amount, phone_number, payment_option):
-    """
-    Initiates an STK Push payment request to M-Pesa.
-    Now uses same shortcode for Paybill and Till Number, differentiating by TransactionType.
-    """
+def initiate_mpesa_payment(amount, phone_number):
     access_token = get_mpesa_access_token()
     if not access_token:
         return {"status": "failed", "message": "Failed to obtain M-Pesa access token."}
 
-    mpesa_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE") # Same for Paybill and Till
+    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE")
     passkey = os.getenv("MPESA_PASSKEY")
     callback_url = os.getenv("MPESA_CALLBACK_URL")
-
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    password = base64.b64encode(str(business_shortcode + passkey + timestamp).encode()).decode()
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
+    password = base64.b64encode(f"{business_shortcode}{passkey}{timestamp}".encode()).decode()
 
     payload = {
         "BusinessShortCode": business_shortcode,
         "Password": password,
         "Timestamp": timestamp,
-        "Amount": int(amount),  # Amount must be an integer
-        "PartyA": phone_number,  # Customer phone number
-        "PartyB": business_shortcode,  # Your paybill number, same as BusinessShortCode in sandbox
-        "PhoneNumber": phone_number,  # Customer phone number
-        "CallBackURL": callback_url,  # Your callback URL
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": int(amount),
+        "PartyA": phone_number,
+        "PartyB": business_shortcode,
+        "PhoneNumber": phone_number,
+        "CallBackURL": callback_url,
+        "AccountReference": "Bill Payment",
         "TransactionDesc": "Payment of Utility Bill"
     }
 
-    if payment_option == "paybill":
-        payload["TransactionType"] = "CustomerPayBillOnline"
-        payload["AccountReference"] = "Bill Payment"  # Required for Paybill
-    #elif payment_option == "till"://Removed till option
-      #  payload["TransactionType"] = "CustomerBuyGoodsOnline"
-       # payload["AccountReference"] = "Bill Payment"  # Required for Till
-    else:
-        return {"status": "failed", "message": "Invalid payment option"}
-
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
     try:
-        response = requests.post(mpesa_url, json=payload, headers=headers)
+        response = requests.post(f"{MPESA_API_URL}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
-        print("M-Pesa STK Push Response:", json_response)  # Debugging
-                #Log the transaction type and payload
-        logging.debug(f"M-Pesa Transaction Type: {payload.get('TransactionType')}")
         logging.debug(f"M-Pesa STK Push Payload: {payload}")
-
-
-        #if json_response.get("ResponseCode") == "00": #Old Code With Error
-        if json_response.get("ResponseCode") == "0":
-            return {"status": "success", "CheckoutRequestID": json_response.get("CheckoutRequestID"), "CustomerMessage": json_response.get("CustomerMessage"), "ResponseCode": json_response.get("ResponseCode")}
-        else:
-            return {"status": "failed", "message": json_response.get("ResponseDescription")}
-
+        return {
+            "status": "success" if json_response.get("ResponseCode") == "0" else "failed",
+            "message": json_response.get("CustomerMessage", json_response.get("ResponseDescription")),
+            "CheckoutRequestID": json_response.get("CheckoutRequestID")
+        }
     except requests.exceptions.RequestException as e:
-        print(f"M-Pesa STK Push Error: {e}")
+        logging.error(f"M-Pesa STK Push Error: {e}")
         return {"status": "failed", "message": str(e)}
 

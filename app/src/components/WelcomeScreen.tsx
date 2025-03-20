@@ -62,11 +62,14 @@ const WelcomeScreen = () => {
                             <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-[#E91E63] to-[#9C27B0] mb-4 shadow-lg">
                                 <Heart className="text-white" size={30} />
                             </div>
-                            <h2 className="text-3xl font-bold text-gray-800">Welcome to BillEase!</h2>
-                            <p className="text-gray-600 mt-2 text-center">Let’s set up your bills.</p>
-                            <p className="text-gray-600 mt-2 text-center">BillEase makes it easy to track and manage your expenses.
-                                Get organized and never miss a payment again!
+                            <h2 className="text-3xl font-bold text-gray-800">Welcome to PayTrack!</h2>
+                            <p className="text-gray-600 mt-2 text-center">
+                                Simplify your bill payments and stay on top of your expenses.
                             </p>
+                            <p className="text-gray-600 mt-2 text-center">
+                                Get started now and never miss a payment again!
+                            </p>
+                        
                         </motion.div>
 
                         <motion.div className="flex items-center justify-center" variants={itemVariants}>
