@@ -1,3 +1,4 @@
+// File: ./components/dashboard/Settings.tsx
 // app/src/components/dashboard/Settings.tsx
 'use client';
 

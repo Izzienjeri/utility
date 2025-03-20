@@ -69,9 +69,7 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
     if payment_option == "paybill":
         payload["TransactionType"] = "CustomerPayBillOnline"
         payload["AccountReference"] = "Bill Payment"  # Required for Paybill
-    elif payment_option == "till":
-        payload["TransactionType"] = "CustomerBuyGoodsOnline"
-        payload["AccountReference"] = "Bill Payment"  # Required for Till
+
     else:
         return {"status": "failed", "message": "Invalid payment option"}
 
@@ -80,7 +78,7 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
         print("M-Pesa STK Push Response:", json_response)  # Debugging
-        #Log the transaction type and payload
+                #Log the transaction type and payload
         logging.debug(f"M-Pesa Transaction Type: {payload.get('TransactionType')}")
         logging.debug(f"M-Pesa STK Push Payload: {payload}")
 

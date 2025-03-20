@@ -1,3 +1,4 @@
+// File: ./components/dashboard/PaymentHistory.tsx
 // app/src/components/dashboard/PaymentHistory.tsx
 'use client';
 

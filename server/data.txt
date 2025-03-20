@@ -3,6 +3,7 @@
 models.py
 ========================================
 
+# models.py
 # server/models.py
 
 import uuid
@@ -52,7 +53,7 @@ class Bill(db.Model):
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    till_number = db.Column(db.String(50), nullable=True)  # Till Number
+    #till_number = db.Column(db.String(50), nullable=True)  # Till Number //Removed till number
     paybill_number = db.Column(db.String(50), nullable=True) #Paybill Number
     account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)
@@ -70,7 +71,8 @@ class Payment(db.Model):
     bill_id = db.Column(db.String(36), db.ForeignKey("bills.id"), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     amount_paid = db.Column(db.Float, nullable=False)
-    payment_reference = db.Column(db.String(100), unique=True, nullable=False)
+    payment_reference = db.Column(db.String(100), nullable=False) # Changed unique=True to unique=False
+    mpesa_receipt_number = db.Column(db.String(100), nullable=True) #  NEW: M-Pesa transaction code
     status = db.Column(db.String(20), default="Completed")
     paid_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -94,13 +96,23 @@ class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
-
+        #fields = ("id", "user_id", "bill_type", "amount", "payment_option", "paybill_number", "account_number", "due_date", "status", "created_at") # Include all fields for serialization
+        exclude = ("till_number",) #removed till number
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Payment
         load_instance = True
-        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT 
+        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT
+
+class PaymentWithBillSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Payment
+        load_instance = True
+        datetimeformat = "%Y-%m-%dT%H:%M:%S"
+
+    bill = fields.Nested(BillSchema) # Nest the bill schema to serialize the bill object
+
 
 
 user_schema = UserSchema()
@@ -109,6 +121,7 @@ bill_schema = BillSchema()
 bills_schema = BillSchema(many=True)
 payment_schema = PaymentSchema()
 payments_schema = PaymentSchema(many=True)
+payment_with_bill_schema = PaymentWithBillSchema() #This may be unused but can keep if needed in the future
 
 
 ========================================
@@ -400,10 +413,11 @@ routes/payment_routes.py
 ========================================
 
 # routes/payment_routes.py
+# routes/payment_routes.py
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
-from models import db, Payment, Bill, User, payment_schema, payments_schema
+from models import db, Payment, Bill, User, payment_schema, payments_schema, PaymentWithBillSchema  # Import the new schema
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.mpesa import initiate_mpesa_payment
 import logging
@@ -466,7 +480,8 @@ class PaymentHistoryResource(Resource):
         user_id = get_jwt_identity()
         payments = Payment.query.filter_by(user_id=user_id).order_by(Payment.paid_at.desc()).limit(5).all()
 
-        return jsonify(payments_schema.dump(payments))
+        # Use the new schema to serialize the payments with bill data
+        return PaymentWithBillSchema(many=True).dump(payments)
 
 class MpesaCallbackResource(Resource):
     def post(self):
@@ -507,6 +522,7 @@ class MpesaCallbackResource(Resource):
 
                 # **NEW: Store the M-Pesa receipt number if available**
                 if mpesa_receipt_number:
+                    payment.mpesa_receipt_number = mpesa_receipt_number # Store in new field
                     payment.payment_reference = mpesa_receipt_number
                 else:
                     print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
@@ -568,19 +584,19 @@ class BillListResource(Resource):
         # Validation: Check if only one of till_number or paybill_number is provided
         payment_option = data.get("payment_option")
         paybill_number = data.get("paybill_number")
-        till_number = data.get("till_number")
+        #till_number = data.get("till_number") //Removed till number
         account_number = data.get("account_number")
 
         if payment_option == "paybill":
             if not paybill_number or not account_number:
                 return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            if till_number:
-                return {"message": "Paybill should not have a Till Number"}, 400
-        elif payment_option == "till":
-            if not till_number:
-                return {"message": "Till requires a Till Number"}, 400
-            if paybill_number or account_number:
-                return {"message": "Till should not have Paybill or Account Number"}, 400
+            #if till_number: //Removed till number
+                #return {"message": "Paybill should not have a Till Number"}, 400
+        #elif payment_option == "till": //Removed till number
+           # if not till_number:
+              #  return {"message": "Till requires a Till Number"}, 400
+            #if paybill_number or account_number:
+              #  return {"message": "Till should not have Paybill or Account Number"}, 400
         else:
             return {"message": "Invalid payment option"}, 400
 
@@ -595,8 +611,8 @@ class BillListResource(Resource):
         if payment_option == "paybill":
             new_bill.paybill_number = paybill_number
             new_bill.account_number = account_number
-        elif payment_option == "till":
-            new_bill.till_number = till_number
+        #elif payment_option == "till": //Removed till number
+          #  new_bill.till_number = till_number
 
         db.session.add(new_bill)
         db.session.commit()
@@ -643,19 +659,19 @@ class BillResource(Resource):
 
         payment_option = data.get("payment_option")
         paybill_number = data.get("paybill_number")
-        till_number = data.get("till_number")
+        #till_number = data.get("till_number") //Removed till number
         account_number = data.get("account_number")
 
         if payment_option == "paybill":
             if not paybill_number or not account_number:
                 return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            if till_number:
-                return {"message": "Paybill should not have a Till Number"}, 400
-        elif payment_option == "till":
-            if not till_number:
-                return {"message": "Till requires a Till Number"}, 400
-            if paybill_number or account_number:
-                return {"message": "Till should not have Paybill or Account Number"}, 400
+            #if till_number: //Removed till number
+             #   return {"message": "Paybill should not have a Till Number"}, 400
+       # elif payment_option == "till": //Removed till number
+           # if not till_number:
+              #  return {"message": "Till requires a Till Number"}, 400
+           # if paybill_number or account_number:
+             #   return {"message": "Till should not have Paybill or Account Number"}, 400
         else:
             return {"message": "Invalid payment option"}, 400
 
@@ -663,7 +679,7 @@ class BillResource(Resource):
         bill.amount = data["amount"]
         bill.payment_option = payment_option
         bill.paybill_number = paybill_number
-        bill.till_number = till_number
+        #bill.till_number = till_number  //Removed till number
         bill.account_number = account_number
         bill.due_date = data["due_date"]
 
@@ -750,9 +766,9 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
     if payment_option == "paybill":
         payload["TransactionType"] = "CustomerPayBillOnline"
         payload["AccountReference"] = "Bill Payment"  # Required for Paybill
-    elif payment_option == "till":
-        payload["TransactionType"] = "CustomerBuyGoodsOnline"
-        payload["AccountReference"] = "Bill Payment"  # Required for Till
+    #elif payment_option == "till"://Removed till option
+      #  payload["TransactionType"] = "CustomerBuyGoodsOnline"
+       # payload["AccountReference"] = "Bill Payment"  # Required for Till
     else:
         return {"status": "failed", "message": "Invalid payment option"}
 
@@ -761,7 +777,7 @@ def initiate_mpesa_payment(amount, phone_number, payment_option):
         response.raise_for_status()  # Raise HTTPError for bad responses
         json_response = response.json()
         print("M-Pesa STK Push Response:", json_response)  # Debugging
-        #Log the transaction type and payload
+                #Log the transaction type and payload
         logging.debug(f"M-Pesa Transaction Type: {payload.get('TransactionType')}")
         logging.debug(f"M-Pesa STK Push Payload: {payload}")
 

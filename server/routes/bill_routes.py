@@ -24,22 +24,14 @@ class BillListResource(Resource):
             logging.debug(f"Validation errors: {errors}")
             return {"errors": errors}, 400
 
-        # Validation: Check if only one of till_number or paybill_number is provided
         payment_option = data.get("payment_option")
         paybill_number = data.get("paybill_number")
-        till_number = data.get("till_number")
         account_number = data.get("account_number")
 
         if payment_option == "paybill":
             if not paybill_number or not account_number:
                 return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            if till_number:
-                return {"message": "Paybill should not have a Till Number"}, 400
-        elif payment_option == "till":
-            if not till_number:
-                return {"message": "Till requires a Till Number"}, 400
-            if paybill_number or account_number:
-                return {"message": "Till should not have Paybill or Account Number"}, 400
+
         else:
             return {"message": "Invalid payment option"}, 400
 
@@ -54,8 +46,7 @@ class BillListResource(Resource):
         if payment_option == "paybill":
             new_bill.paybill_number = paybill_number
             new_bill.account_number = account_number
-        elif payment_option == "till":
-            new_bill.till_number = till_number
+
 
         db.session.add(new_bill)
         db.session.commit()
@@ -102,19 +93,12 @@ class BillResource(Resource):
 
         payment_option = data.get("payment_option")
         paybill_number = data.get("paybill_number")
-        till_number = data.get("till_number")
         account_number = data.get("account_number")
 
         if payment_option == "paybill":
             if not paybill_number or not account_number:
                 return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-            if till_number:
-                return {"message": "Paybill should not have a Till Number"}, 400
-        elif payment_option == "till":
-            if not till_number:
-                return {"message": "Till requires a Till Number"}, 400
-            if paybill_number or account_number:
-                return {"message": "Till should not have Paybill or Account Number"}, 400
+
         else:
             return {"message": "Invalid payment option"}, 400
 
@@ -122,7 +106,6 @@ class BillResource(Resource):
         bill.amount = data["amount"]
         bill.payment_option = payment_option
         bill.paybill_number = paybill_number
-        bill.till_number = till_number
         bill.account_number = account_number
         bill.due_date = data["due_date"]
 

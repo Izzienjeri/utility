@@ -1,4 +1,5 @@
 # routes/payment_routes.py
+# routes/payment_routes.py
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
@@ -107,6 +108,7 @@ class MpesaCallbackResource(Resource):
 
                 # **NEW: Store the M-Pesa receipt number if available**
                 if mpesa_receipt_number:
+                    payment.mpesa_receipt_number = mpesa_receipt_number # Store in new field
                     payment.payment_reference = mpesa_receipt_number
                 else:
                     print("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")

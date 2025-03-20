@@ -1,3 +1,4 @@
+// File: ./components/BillForm.tsx
 // app/src/components/BillForm.tsx
 "use client";
 
@@ -14,6 +15,7 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner"; // Import toast from sonner
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -27,7 +29,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [amount, setAmount] = useState("");
   const [paymentOption, setPaymentOption] = useState("");
   const [paybillNumber, setPaybillNumber] = useState("");
-  const [tillNumber, setTillNumber] = useState("");
+  //const [tillNumber, setTillNumber] = useState(""); // Removed tillNumber
   const [accountNumber, setAccountNumber] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState("");
@@ -61,7 +63,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
 
   const paymentOptions = [
     { value: "paybill", label: "Paybill" },
-    { value: "till", label: "Till Number" },
+    //{ value: "till", label: "Till Number" }, // Removed Till option
   ];
 
   useEffect(() => {
@@ -73,7 +75,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
           console.log("accessToken in BillForm:", token);
         } else {
           console.warn("No access token found in localStorage.");
-          setError("Authentication required. Please login.");
+          toast.error("Authentication required. Please login.");
           router.push("/?page=login"); // Redirect to login
           return;
         }
@@ -98,14 +100,14 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
               setAmount(billData.amount);
               setPaymentOption(billData.payment_option);
               setPaybillNumber(billData.paybill_number || "");
-              setTillNumber(billData.till_number || "");
+              //setTillNumber(billData.till_number || ""); // Removed tillNumber
               setAccountNumber(billData.account_number || "");
               setDueDate(billData.due_date);
             } else {
-              setError("Failed to fetch bill for editing.");
+              toast.error("Failed to fetch bill for editing.");
             }
           } catch (err) {
-            setError("An error occurred while fetching the bill.");
+            toast.error("An error occurred while fetching the bill.");
             console.error(err);
           }
         } else {
@@ -113,9 +115,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         }
       } else {
         console.warn("localStorage is not available.");
-        setError(
-          "localStorage is not available. Please enable cookies or use a different browser."
-        );
+        toast.error("localStorage is not available. Please enable cookies or use a different browser.");
         setIsLoadingToken(false);
       }
     };
@@ -132,32 +132,32 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     e.preventDefault();
 
     if (isLoadingToken) {
-      setError("Please wait while the authentication token is loaded.");
+      toast.error("Please wait while the authentication token is loaded.");
       return;
     }
 
     if (!accessToken) {
-      setError("Authentication required. Please login.");
+      toast.error("Authentication required. Please login.");
       return;
     }
 
     if (!billType || !amount || !paymentOption || !dueDate) {
-      setError("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     // Validate based on payment option
     if (paymentOption === "paybill") {
       if (!paybillNumber || !accountNumber) {
-        setError("Paybill requires both Paybill Number and Account Number.");
+        toast.error("Paybill requires both Paybill Number and Account Number.");
         return;
       }
-    } else if (paymentOption === "till") {
+    }/* else if (paymentOption === "till") { // Removed till validation
       if (!tillNumber) {
-        setError("Till Number is required for Till payment.");
+        toast.error("Till Number is required for Till payment.");
         return;
       }
-    }
+    }*/
 
     try {
       const url = editBillId
@@ -176,9 +176,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       if (paymentOption === "paybill") {
         requestBody.paybill_number = paybillNumber;
         requestBody.account_number = accountNumber;
-      } else if (paymentOption === "till") {
+      } /*else if (paymentOption === "till") { //Removed till number from request body
         requestBody.till_number = tillNumber;
-      }
+      }*/
 
       const response = await fetch(url, {
         method: method,
@@ -192,26 +192,24 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage(
-          editBillId ? "Bill updated successfully!" : "Bill added successfully!"
-        );
+        toast.success(editBillId ? "Bill updated successfully!" : "Bill added successfully!");
         setError("");
         setBillType("");
         setAmount("");
         setPaymentOption("");
         setPaybillNumber("");
-        setTillNumber("");
+        //setTillNumber(""); // Removed tillNumber
         setAccountNumber("");
         setDueDate("");
 
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
       } else {
-        setError(data.message || "Failed to add bill.");
+        toast.error(data.message || "Failed to add bill.");
         setSuccessMessage("");
       }
     } catch (err) {
-      setError("An error occurred while adding the bill.");
+      toast.error("An error occurred while adding the bill.");
       setSuccessMessage("");
       console.error(err);
     }
@@ -465,7 +463,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                   </>
                 )}
 
-                {paymentOption === "till" && (
+                {/*{paymentOption === "till" && ( // Removed tillNumber form section
                   <motion.div className="mb-4" variants={itemVariants}>
                     <label
                       className="block text-gray-700 text-sm font-medium mb-2"
@@ -482,7 +480,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                       onChange={(e) => setTillNumber(e.target.value)}
                     />
                   </motion.div>
-                )}
+                )}*/}
 
                 <motion.div className="mb-6" variants={itemVariants}>
                   <label

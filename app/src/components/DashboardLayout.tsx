@@ -1,3 +1,4 @@
+// File: ./components/DashboardLayout.tsx
 // DashboardLayout.tsx
 "use client";
 

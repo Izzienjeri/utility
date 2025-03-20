@@ -1,6 +1,8 @@
+// File: ./app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'sonner'; // Import Toaster
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,6 +22,7 @@ export default function RootLayout({
         <div className="min-h-screen flex flex-col">
           {/* Add a header/navigation here if needed */}
           <main className="flex-grow">{children}</main>
+            <Toaster richColors /> {/* Add Toaster here */}
           {/* Add a footer here if needed */}
         </div>
       </body>

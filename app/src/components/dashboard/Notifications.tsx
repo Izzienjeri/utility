@@ -1,3 +1,4 @@
+// File: ./components/dashboard/Notifications.tsx
 // app/src/components/dashboard/Notifications.tsx
 'use client';
 

@@ -1,3 +1,4 @@
+# models.py
 # server/models.py
 
 import uuid
@@ -47,7 +48,6 @@ class Bill(db.Model):
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     payment_option = db.Column(db.String(50), nullable=False)  # 'paybill' or 'till'
-    till_number = db.Column(db.String(50), nullable=True)  # Till Number
     paybill_number = db.Column(db.String(50), nullable=True) #Paybill Number
     account_number = db.Column(db.String(50), nullable=True)  # Account Number (for Paybill)
     due_date = db.Column(db.Date, nullable=False)
@@ -65,7 +65,8 @@ class Payment(db.Model):
     bill_id = db.Column(db.String(36), db.ForeignKey("bills.id"), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     amount_paid = db.Column(db.Float, nullable=False)
-    payment_reference = db.Column(db.String(100), unique=True, nullable=False)
+    payment_reference = db.Column(db.String(100), nullable=False) # Changed unique=True to unique=False
+    mpesa_receipt_number = db.Column(db.String(100), nullable=True) #  NEW: M-Pesa transaction code
     status = db.Column(db.String(20), default="Completed")
     paid_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -89,7 +90,7 @@ class BillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Bill
         load_instance = True
-        # Include all fields for serialization
+
 
 class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:

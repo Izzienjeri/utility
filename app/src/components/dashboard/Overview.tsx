@@ -1,9 +1,12 @@
+// File: ./components/dashboard/Overview.tsx
 // app/src/components/dashboard/Overview.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { format, isWithinInterval, parseISO } from 'date-fns'; // Import date-fns functions
+import { toast } from 'sonner'; // Import toast
+import { Clock, CheckCircle, AlertTriangle, Wallet, Calendar, LucideIcon } from 'lucide-react'; // Import icons
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -33,6 +36,25 @@ const Overview = () => {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);  // New state
+    const [paymentTimeoutId, setPaymentTimeoutId] = useState<NodeJS.Timeout | null>(null); // Timeout ID
+
+    const [billDetails, setBillDetails] = useState<{ [billId: string]: Bill }>({}); // State to hold bill details
+
+    // Define a type for payment status icons
+    type PaymentStatusIcons = {
+        [key: string]: {
+            icon: LucideIcon;
+            color: string;
+        };
+    };
+
+    // Payment Status Icons
+    const paymentStatusIcons: PaymentStatusIcons = {
+        Completed: { icon: CheckCircle, color: 'text-green-500' },
+        Pending: { icon: Clock, color: 'text-yellow-500' },
+        Failed: { icon: AlertTriangle, color: 'text-red-500' },
+    };
 
     useEffect(() => {
         const fetchBills = async () => {
@@ -43,6 +65,7 @@ const Overview = () => {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
                     setError('No access token found. Please log in.');
+                    toast.error('No access token found. Please log in.');
                     return;
                 }
                 setAccessToken(token);
@@ -93,15 +116,27 @@ const Overview = () => {
                 if (!transactionsResponse.ok) {
                     console.warn("Failed to fetch transactions.");
                     setRecentTransactions([]);
+                    toast.error("Failed to fetch transactions.");
                 } else {
                     let transactionsData: Transaction[] = await transactionsResponse.json();
                     setRecentTransactions(transactionsData);
+
+                     // Create a map of bill details for easy access
+                     const billMap: { [billId: string]: Bill } = {};
+                     transactionsData.forEach(transaction => {
+                         if (transaction.bill) {
+                             billMap[transaction.bill.id] = transaction.bill;
+                         }
+                     });
+                     setBillDetails(billMap);
+
                 }
 
             } catch (e: any) {
                 setError(`Failed to fetch data: ${e.message}`);
                 console.error("Error fetching data:", e);
                 setRecentTransactions([]);
+                toast.error(`Failed to fetch data: ${e.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -135,53 +170,93 @@ const Overview = () => {
         }
     };
 
-
-
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Overview</motion.h2>
 
-            {isLoading && <div>Loading data...</div>}
-            {error && <div className="text-red-500">Error: {error}</div>}
+            {isLoading ? (
+                <div className="flex items-center justify-center">
+                    <Clock className="animate-spin mr-2" /> Loading data...
+                </div>
+            ) : null}
+
+            {error && <div className="text-red-500 mb-4">Error: {error}</div>}
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Upcoming Bills</h3>
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Calendar className="mr-2" /> Upcoming Bills</h3>
                 {upcomingBills.length > 0 ? (
-                    <ul>
-                        {upcomingBills.map(bill => (
-                            <li key={bill.id} className="py-2 border-b">
-                                {bill.bill_type} - Due: {bill.due_date} - Amount: ${bill.amount}
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2 text-left text-gray-600">Type</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Due Date</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {upcomingBills.map(bill => (
+                                    <tr key={bill.id} className="border-b">
+                                        <td className="px-4 py-2 text-gray-700">{bill.bill_type}</td>
+                                        <td className="px-4 py-2 text-gray-700">{format(parseISO(bill.due_date), 'PPP')}</td>
+                                        <td className="px-4 py-2 text-gray-700">Ksh {bill.amount}</td>
+                                        <td className="px-4 py-2 text-gray-700">{bill.status}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : (
                     <p className="text-gray-600">No upcoming bills in the next 10 days.</p>
                 )}
             </motion.div>
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Total Due Amount</h3>
-                <p className="text-gray-600">
-                    {totalDue > 0 ? `$${totalDue}` : 'No bills due in the next 10 days.'}
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"> <Wallet className="mr-2" /> Total Due Amount</h3>
+                <p className="text-gray-600 font-semibold text-xl">
+                    {totalDue > 0 ? `Ksh ${totalDue}` : 'No bills due in the next 10 days.'}
                 </p>
             </motion.div>
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Recent Transactions</h3>
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Clock className="mr-2" /> Recent Transactions</h3>
                 {recentTransactions.length > 0 ? (
-                    <ul>
-                        {recentTransactions.map(transaction => {
-                            const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
-                            //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
-                            const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2 text-left text-gray-600">Bill Type</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Date</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentTransactions.map(transaction => {
+                                    const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
+                                    //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
+                                    const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
+                                    const statusInfo = paymentStatusIcons[transaction.status] || { icon: AlertTriangle, color: 'text-gray-500' };
+                                    const StatusIcon = statusInfo.icon;
 
-                            return (
-                                <li key={transaction.id} className="py-2 border-b">
-                                    Bill: {billType} - Date: {formattedDate} - Amount: Ksh {transaction.amount_paid}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                    return (
+                                        <tr key={transaction.id} className="border-b">
+                                            <td className="px-4 py-2 text-gray-700">{billType}</td>
+                                            <td className="px-4 py-2 text-gray-700">{formattedDate}</td>
+                                            <td className="px-4 py-2 text-gray-700">Ksh {transaction.amount_paid}</td>
+                                            <td className="px-4 py-2 text-gray-700">
+                                                <div className="flex items-center">
+                                                    <StatusIcon className={`mr-1 w-4 h-4 ${statusInfo.color}`} />
+                                                    {transaction.status}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : (
                     <p className="text-gray-600">No recent transactions.</p>
                 )}

@@ -1,6 +1,6 @@
 File: ./components/Auth.tsx
 ================================================================================
-// app/src/components/Auth.tsx
+// File: ./components/Auth.tsx
 "use client";
 
 import { useState } from "react";
@@ -15,6 +15,7 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner";  // Import toast
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -40,7 +41,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      //setError("Please enter both email and password.");
+      toast.error("Please enter both email and password.");
       return;
     }
 
@@ -70,10 +72,12 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
       } else {
-        setError(data.message || "Login failed.");
+        //setError(data.message || "Login failed.");
+        toast.error(data.message || "Login failed.");
       }
     } catch (err) {
-      setError("An error occurred during login.");
+      //setError("An error occurred during login.");
+      toast.error("An error occurred during login.");
       console.error(err);
     }
   };
@@ -82,12 +86,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!fullName || !email || !phone || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
+      //setError("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      //setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
@@ -110,7 +116,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
-        setSuccessMessage(data.message || "Registration successful!");
+        //setSuccessMessage(data.message || "Registration successful!");
+        toast.success(data.message || "Registration successful!");
         setError("");
         router.push("/?page=welcome"); // Redirect to welcome first
         // END NEW CODE
@@ -119,15 +126,18 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           const errorMessages = Object.entries(data.errors)
             .map(([field, message]) => `${field}: ${message}`)
             .join(", ");
-          setError(`Registration failed: ${errorMessages}`);
+          //setError(`Registration failed: ${errorMessages}`);
+          toast.error(`Registration failed: ${errorMessages}`);
         } else {
-          setError(data.message || "Registration failed.");
+          //setError(data.message || "Registration failed.");
+          toast.error(data.message || "Registration failed.");
         }
         setSuccessMessage("");
         console.error("Registration error:", data);
       }
     } catch (err) {
-      setError("An error occurred during registration.");
+      //setError("An error occurred during registration.");
+      toast.error("An error occurred during registration.");
       setSuccessMessage("");
       console.error("Registration fetch error:", err);
     }
@@ -514,6 +524,7 @@ export default Auth;
 ================================================================================
 File: ./components/WelcomeScreen.tsx
 ================================================================================
+// File: ./components/WelcomeScreen.tsx
 // app/src/components/WelcomeScreen.tsx
 'use client';
 
@@ -607,6 +618,7 @@ export default WelcomeScreen;
 ================================================================================
 File: ./components/BillForm.tsx
 ================================================================================
+// File: ./components/BillForm.tsx
 // app/src/components/BillForm.tsx
 "use client";
 
@@ -623,6 +635,7 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner"; // Import toast from sonner
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -636,7 +649,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [amount, setAmount] = useState("");
   const [paymentOption, setPaymentOption] = useState("");
   const [paybillNumber, setPaybillNumber] = useState("");
-  const [tillNumber, setTillNumber] = useState("");
+  //const [tillNumber, setTillNumber] = useState(""); // Removed tillNumber
   const [accountNumber, setAccountNumber] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState("");
@@ -670,7 +683,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
 
   const paymentOptions = [
     { value: "paybill", label: "Paybill" },
-    { value: "till", label: "Till Number" },
+    //{ value: "till", label: "Till Number" }, // Removed Till option
   ];
 
   useEffect(() => {
@@ -682,7 +695,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
           console.log("accessToken in BillForm:", token);
         } else {
           console.warn("No access token found in localStorage.");
-          setError("Authentication required. Please login.");
+          toast.error("Authentication required. Please login.");
           router.push("/?page=login"); // Redirect to login
           return;
         }
@@ -707,14 +720,14 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
               setAmount(billData.amount);
               setPaymentOption(billData.payment_option);
               setPaybillNumber(billData.paybill_number || "");
-              setTillNumber(billData.till_number || "");
+              //setTillNumber(billData.till_number || ""); // Removed tillNumber
               setAccountNumber(billData.account_number || "");
               setDueDate(billData.due_date);
             } else {
-              setError("Failed to fetch bill for editing.");
+              toast.error("Failed to fetch bill for editing.");
             }
           } catch (err) {
-            setError("An error occurred while fetching the bill.");
+            toast.error("An error occurred while fetching the bill.");
             console.error(err);
           }
         } else {
@@ -722,9 +735,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         }
       } else {
         console.warn("localStorage is not available.");
-        setError(
-          "localStorage is not available. Please enable cookies or use a different browser."
-        );
+        toast.error("localStorage is not available. Please enable cookies or use a different browser.");
         setIsLoadingToken(false);
       }
     };
@@ -741,32 +752,32 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     e.preventDefault();
 
     if (isLoadingToken) {
-      setError("Please wait while the authentication token is loaded.");
+      toast.error("Please wait while the authentication token is loaded.");
       return;
     }
 
     if (!accessToken) {
-      setError("Authentication required. Please login.");
+      toast.error("Authentication required. Please login.");
       return;
     }
 
     if (!billType || !amount || !paymentOption || !dueDate) {
-      setError("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     // Validate based on payment option
     if (paymentOption === "paybill") {
       if (!paybillNumber || !accountNumber) {
-        setError("Paybill requires both Paybill Number and Account Number.");
+        toast.error("Paybill requires both Paybill Number and Account Number.");
         return;
       }
-    } else if (paymentOption === "till") {
+    }/* else if (paymentOption === "till") { // Removed till validation
       if (!tillNumber) {
-        setError("Till Number is required for Till payment.");
+        toast.error("Till Number is required for Till payment.");
         return;
       }
-    }
+    }*/
 
     try {
       const url = editBillId
@@ -785,9 +796,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       if (paymentOption === "paybill") {
         requestBody.paybill_number = paybillNumber;
         requestBody.account_number = accountNumber;
-      } else if (paymentOption === "till") {
+      } /*else if (paymentOption === "till") { //Removed till number from request body
         requestBody.till_number = tillNumber;
-      }
+      }*/
 
       const response = await fetch(url, {
         method: method,
@@ -801,26 +812,24 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage(
-          editBillId ? "Bill updated successfully!" : "Bill added successfully!"
-        );
+        toast.success(editBillId ? "Bill updated successfully!" : "Bill added successfully!");
         setError("");
         setBillType("");
         setAmount("");
         setPaymentOption("");
         setPaybillNumber("");
-        setTillNumber("");
+        //setTillNumber(""); // Removed tillNumber
         setAccountNumber("");
         setDueDate("");
 
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
       } else {
-        setError(data.message || "Failed to add bill.");
+        toast.error(data.message || "Failed to add bill.");
         setSuccessMessage("");
       }
     } catch (err) {
-      setError("An error occurred while adding the bill.");
+      toast.error("An error occurred while adding the bill.");
       setSuccessMessage("");
       console.error(err);
     }
@@ -1074,7 +1083,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                   </>
                 )}
 
-                {paymentOption === "till" && (
+                {/*{paymentOption === "till" && ( // Removed tillNumber form section
                   <motion.div className="mb-4" variants={itemVariants}>
                     <label
                       className="block text-gray-700 text-sm font-medium mb-2"
@@ -1091,7 +1100,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                       onChange={(e) => setTillNumber(e.target.value)}
                     />
                   </motion.div>
-                )}
+                )}*/}
 
                 <motion.div className="mb-6" variants={itemVariants}>
                   <label
@@ -1142,6 +1151,7 @@ export default BillForm;
 ================================================================================
 File: ./components/DashboardLayout.tsx
 ================================================================================
+// File: ./components/DashboardLayout.tsx
 // DashboardLayout.tsx
 "use client";
 
@@ -1275,6 +1285,7 @@ export default DashboardLayout;
 ================================================================================
 File: ./components/dashboard/PaymentHistory.tsx
 ================================================================================
+// File: ./components/dashboard/PaymentHistory.tsx
 // app/src/components/dashboard/PaymentHistory.tsx
 'use client';
 
@@ -1331,6 +1342,7 @@ export default PaymentHistory;
 ================================================================================
 File: ./components/dashboard/Notifications.tsx
 ================================================================================
+// File: ./components/dashboard/Notifications.tsx
 // app/src/components/dashboard/Notifications.tsx
 'use client';
 
@@ -1385,12 +1397,15 @@ export default Notifications;
 ================================================================================
 File: ./components/dashboard/Overview.tsx
 ================================================================================
+// File: ./components/dashboard/Overview.tsx
 // app/src/components/dashboard/Overview.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { format, isWithinInterval, parseISO } from 'date-fns'; // Import date-fns functions
+import { toast } from 'sonner'; // Import toast
+import { Clock, CheckCircle, AlertTriangle, Wallet, Calendar, LucideIcon } from 'lucide-react'; // Import icons
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -1420,6 +1435,25 @@ const Overview = () => {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);  // New state
+    const [paymentTimeoutId, setPaymentTimeoutId] = useState<NodeJS.Timeout | null>(null); // Timeout ID
+
+    const [billDetails, setBillDetails] = useState<{ [billId: string]: Bill }>({}); // State to hold bill details
+
+    // Define a type for payment status icons
+    type PaymentStatusIcons = {
+        [key: string]: {
+            icon: LucideIcon;
+            color: string;
+        };
+    };
+
+    // Payment Status Icons
+    const paymentStatusIcons: PaymentStatusIcons = {
+        Completed: { icon: CheckCircle, color: 'text-green-500' },
+        Pending: { icon: Clock, color: 'text-yellow-500' },
+        Failed: { icon: AlertTriangle, color: 'text-red-500' },
+    };
 
     useEffect(() => {
         const fetchBills = async () => {
@@ -1430,6 +1464,7 @@ const Overview = () => {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
                     setError('No access token found. Please log in.');
+                    toast.error('No access token found. Please log in.');
                     return;
                 }
                 setAccessToken(token);
@@ -1480,50 +1515,33 @@ const Overview = () => {
                 if (!transactionsResponse.ok) {
                     console.warn("Failed to fetch transactions.");
                     setRecentTransactions([]);
+                    toast.error("Failed to fetch transactions.");
                 } else {
                     let transactionsData: Transaction[] = await transactionsResponse.json();
-
-                    // Fetch bill details for each transaction
-                    transactionsData = await Promise.all(
-                        transactionsData.map(async (transaction) => {
-                            try {
-                                const billResponse = await fetch(`${API_BASE_URL}/bills/${transaction.bill_id}`, {
-                                    headers: {
-                                        'Authorization': `Bearer ${token}`,
-                                        'Content-Type': 'application/json',
-                                    },
-                                });
-                    
-                                if (billResponse.ok) {
-                                    const billData: Bill = await billResponse.json();
-                                    return { ...transaction, bill: billData }; // Attach bill details to the transaction
-                                } else {
-                                    console.warn(`Failed to fetch bill details for bill ID: ${transaction.bill_id}`);
-                                    return { ...transaction, bill: { bill_type: 'Unknown Bill Type' } as Bill }; // or some default
-                                }
-                            } catch (error) {
-                                console.error(`Error fetching bill details for bill ID: ${transaction.bill_id}`, error);
-                                return { ...transaction, bill: { bill_type: 'Unknown Bill Type' } as Bill }; // or some default
-                            }
-                        })
-                    );
-
                     setRecentTransactions(transactionsData);
-                    console.log("Transactions Data:", transactionsData);
+
+                     // Create a map of bill details for easy access
+                     const billMap: { [billId: string]: Bill } = {};
+                     transactionsData.forEach(transaction => {
+                         if (transaction.bill) {
+                             billMap[transaction.bill.id] = transaction.bill;
+                         }
+                     });
+                     setBillDetails(billMap);
+
                 }
 
             } catch (e: any) {
                 setError(`Failed to fetch data: ${e.message}`);
                 console.error("Error fetching data:", e);
                 setRecentTransactions([]);
+                toast.error(`Failed to fetch data: ${e.message}`);
             } finally {
                 setIsLoading(false);
             }
-            
         };
 
         fetchBills();
-        
     }, []);
 
     const containerVariants = {
@@ -1551,53 +1569,93 @@ const Overview = () => {
         }
     };
 
-
-
     return (
         <motion.div variants={containerVariants} initial="hidden" animate="visible" exit="exit">
             <motion.h2 className="text-2xl font-semibold mb-4 text-gray-800" variants={itemVariants}>Overview</motion.h2>
 
-            {isLoading && <div>Loading data...</div>}
-            {error && <div className="text-red-500">Error: {error}</div>}
+            {isLoading ? (
+                <div className="flex items-center justify-center">
+                    <Clock className="animate-spin mr-2" /> Loading data...
+                </div>
+            ) : null}
+
+            {error && <div className="text-red-500 mb-4">Error: {error}</div>}
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Upcoming Bills</h3>
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Calendar className="mr-2" /> Upcoming Bills</h3>
                 {upcomingBills.length > 0 ? (
-                    <ul>
-                        {upcomingBills.map(bill => (
-                            <li key={bill.id} className="py-2 border-b">
-                                {bill.bill_type} - Due: {bill.due_date} - Amount: ${bill.amount}
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2 text-left text-gray-600">Type</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Due Date</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {upcomingBills.map(bill => (
+                                    <tr key={bill.id} className="border-b">
+                                        <td className="px-4 py-2 text-gray-700">{bill.bill_type}</td>
+                                        <td className="px-4 py-2 text-gray-700">{format(parseISO(bill.due_date), 'PPP')}</td>
+                                        <td className="px-4 py-2 text-gray-700">Ksh {bill.amount}</td>
+                                        <td className="px-4 py-2 text-gray-700">{bill.status}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : (
                     <p className="text-gray-600">No upcoming bills in the next 10 days.</p>
                 )}
             </motion.div>
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Total Due Amount</h3>
-                <p className="text-gray-600">
-                    {totalDue > 0 ? `$${totalDue}` : 'No bills due in the next 10 days.'}
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"> <Wallet className="mr-2" /> Total Due Amount</h3>
+                <p className="text-gray-600 font-semibold text-xl">
+                    {totalDue > 0 ? `Ksh ${totalDue}` : 'No bills due in the next 10 days.'}
                 </p>
             </motion.div>
 
             <motion.div className="bg-white shadow-md rounded-md p-4 mb-4" variants={itemVariants}>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">Recent Transactions</h3>
+                <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center"><Clock className="mr-2" /> Recent Transactions</h3>
                 {recentTransactions.length > 0 ? (
-                    <ul>
-                        {recentTransactions.map(transaction => {
-                            const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
-                            //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
-                            const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="px-4 py-2 text-left text-gray-600">Bill Type</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Date</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentTransactions.map(transaction => {
+                                    const formattedDate = format(new Date(transaction.paid_at), 'PPP p');
+                                    //const billType = billDetails[transaction.bill_id]?.bill_type || 'Unknown Bill Type';
+                                    const billType = transaction.bill?.bill_type || 'Unknown Bill Type';
+                                    const statusInfo = paymentStatusIcons[transaction.status] || { icon: AlertTriangle, color: 'text-gray-500' };
+                                    const StatusIcon = statusInfo.icon;
 
-                            return (
-                                <li key={transaction.id} className="py-2 border-b">
-                                    Bill: {billType} - Date: {formattedDate} - Amount: Ksh {transaction.amount_paid}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                    return (
+                                        <tr key={transaction.id} className="border-b">
+                                            <td className="px-4 py-2 text-gray-700">{billType}</td>
+                                            <td className="px-4 py-2 text-gray-700">{formattedDate}</td>
+                                            <td className="px-4 py-2 text-gray-700">Ksh {transaction.amount_paid}</td>
+                                            <td className="px-4 py-2 text-gray-700">
+                                                <div className="flex items-center">
+                                                    <StatusIcon className={`mr-1 w-4 h-4 ${statusInfo.color}`} />
+                                                    {transaction.status}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : (
                     <p className="text-gray-600">No recent transactions.</p>
                 )}
@@ -1615,15 +1673,18 @@ export default Overview;
 ================================================================================
 File: ./components/dashboard/ManageBills.tsx
 ================================================================================
+// File: ./components/dashboard/ManageBills.tsx
 // ManageBills.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, Trash2, DollarSign, Plus, Lightbulb, Home, Droplet, Wifi, } from 'lucide-react'; // Added Plus icon, icon here
+import { Edit, Trash2, DollarSign, Plus, Lightbulb, Home, Droplet, Wifi, Calendar, AlertTriangle, Clock } from 'lucide-react'; // Added Plus icon, icon here
 import { Transition } from "@headlessui/react";
 import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner'; // Import toast
+import { ClipLoader } from 'react-spinners'; // Import ClipLoader
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -1648,6 +1709,8 @@ const ManageBills = () => {
     const [showError, setShowError] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth()); // Current month, 0-indexed
     const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
+    const [isPaying, setIsPaying] = useState(false);  // Payment loading state
+    const [payingBillId, setPayingBillId] = useState<string | null>(null); // Track the bill being paid
 
     interface BillType {
         value: string;
@@ -1681,13 +1744,14 @@ const ManageBills = () => {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 setError('No access token found. Please log in.');
+                toast.error('No access token found. Please log in.');
                 return;
             }
 
             const response = await fetch(`${API_BASE_URL}/bills/`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
+                    'Content-Type': `application/json`,
                 },
             });
 
@@ -1707,6 +1771,7 @@ const ManageBills = () => {
             setShowError(true);
             setError(`Failed to fetch data: ${e.message}`);
             console.error("Fetch error:", e);
+            toast.error(`Failed to fetch data: ${e.message}`);
         }
     };
 
@@ -1732,6 +1797,7 @@ const ManageBills = () => {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 setError('No access token found. Please log in.');
+                toast.error('No access token found. Please log in.');
                 return;
             }
 
@@ -1749,8 +1815,10 @@ const ManageBills = () => {
 
             setBills(bills.filter(bill => bill.id !== billId));
             await fetchBills(); // Refresh bills after deletion
+            toast.success("Bill deleted successfully!");
         } catch (e: any) {
             setError(`Failed to delete bill: ${e.message}`);
+            toast.error(`Failed to delete bill: ${e.message}`);
         }
     };
 
@@ -1761,40 +1829,51 @@ const ManageBills = () => {
 
     // Functions for handling payments
     const handlePayBill = async (billId: string) => {
-        try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setError('No access token found. Please log in.');
-                return;
-            }
+    setPayingBillId(billId); // Set the ID of the bill being paid
+    setIsPaying(true); // Start loading
 
-            const response = await fetch(`${API_BASE_URL}/payments/pay`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ bill_id: billId }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-              //Payment initiated, set time out to pull data after
-                window.alert("Payment initiated. Check your phone for the prompt.");
-                 setTimeout(() => {
-                  fetchBills();  // Refetch bills *after* the payment is initiated
-                }, 5000); // Delay to give callback time to process
-                console.log('Payment initiated', data);
-            } else {
-                setError(`Payment failed: ${data.message || 'Unknown error'}`);
-                window.alert(`Payment failed: ${data.message || 'Unknown error'}`);
-            }
-        } catch (e: any) {
-            setError(`An error occurred: ${e.message}`);
-            window.alert(`An error occurred: ${e.message}`);
+    try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            setError('No access token found. Please log in.');
+            toast.error('No access token found. Please log in.');
+            return;
         }
-    };
+
+        const response = await fetch(`${API_BASE_URL}/payments/pay`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ bill_id: billId }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            toast.success("Payment initiated. Check your phone for the prompt.");
+            // Optionally, set a timeout to check the payment status after a certain duration
+            setTimeout(() => {
+                fetchBills();  // Refetch bills *after* the payment is initiated
+                setIsPaying(false);
+                setPayingBillId(null);
+            }, 15000); // e.g., 15 seconds
+
+        } else {
+            setError(`Payment failed: ${data.message || 'Unknown error'}`);
+            toast.error(`Payment failed: ${data.message || 'Unknown error'}`);
+        }
+    } catch (e: any) {
+        setError(`An error occurred: ${e.message}`);
+        toast.error(`An error occurred: ${e.message}`);
+    } finally {
+         if (payingBillId === billId) {
+             setIsPaying(false); // Ensure loading is stopped even on error
+             setPayingBillId(null);
+          }
+    }
+};
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -1835,7 +1914,7 @@ const ManageBills = () => {
                     <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center justify-between">
                         <span>Add New Bill</span>
                         <button
-                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center"
                             onClick={() => {
                                 setEditBillId(null); // Reset editBillId when adding a new bill
                                 setIsModalOpen(true);
@@ -1867,33 +1946,63 @@ const ManageBills = () => {
                 {filteredBills.length > 0 ? (
                     <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
                         <h3 className="text-lg font-medium mb-2 text-gray-700">Your Bills for {monthNames[selectedMonth]}</h3>
-                        <ul>
-                            {filteredBills.map(bill => (
-                                <li key={bill.id} className="py-2 border-b flex items-center justify-between">
-                                    {bill.bill_type} - Due: {format(parseISO(bill.due_date), 'PPP')} - Amount: ${bill.amount} - Status: {bill.status}
-                                    <div>
-                                        <button
-                                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded mr-2"
-                                            onClick={() => handleEditBill(bill.id)}
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 rounded mr-2"
-                                            onClick={() => handleDeleteBill(bill.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-2 rounded"
-                                            onClick={() => handlePayBill(bill.id)}
-                                        >
-                                            <DollarSign className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                           <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="px-4 py-2 text-left text-gray-600">Type</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Due Date</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredBills.map(bill => (
+                                        <tr key={bill.id} className="border-b">
+                                            <td className="px-4 py-2 text-gray-700">{bill.bill_type}</td>
+                                            <td className="px-4 py-2 text-gray-700">{format(parseISO(bill.due_date), 'PPP')}</td>
+                                            <td className="px-4 py-2 text-gray-700">Ksh {bill.amount}</td>
+                                             <td className="px-4 py-2 text-gray-700">
+                                                 {isPaying && payingBillId === bill.id ? (
+                                                    <div className="flex items-center">
+                                                        <Clock className="animate-spin mr-2" /> Paying...
+                                                    </div>
+                                                 ) : bill.status}
+                                             </td>
+
+                                            <td className="px-4 py-2 text-gray-700">
+                                                 <div className="flex items-center">
+                                                    <button
+                                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded mr-2 flex items-center"
+                                                        onClick={() => handleEditBill(bill.id)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                        </button>
+                                                    <button
+                                                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 rounded mr-2 flex items-center"
+                                                        onClick={() => handleDeleteBill(bill.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        className={`bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-2 rounded flex items-center ${isPaying && payingBillId === bill.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        onClick={() => handlePayBill(bill.id)}
+                                                        disabled={isPaying && payingBillId === bill.id}
+                                                    >
+                                                         {isPaying && payingBillId === bill.id ? (
+                                                            <ClipLoader color="#ffffff" size={16} />
+                                                        ) : (
+                                                            <><DollarSign className="h-4 w-4" /> </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </motion.div>
                 ) : (
                     <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
@@ -1951,7 +2060,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
     const [amount, setAmount] = useState("");
     const [paymentOption, setPaymentOption] = useState("");
     const [paybillNumber, setPaybillNumber] = useState("");
-    const [tillNumber, setTillNumber] = useState("");
+    //const [tillNumber, setTillNumber] = useState(""); //Removed tillNumber
     const [accountNumber, setAccountNumber] = useState("");
     const [dueDate, setDueDate] = useState("");
     const [isBillTypeOpen, setIsBillTypeOpen] = useState(false);
@@ -1960,10 +2069,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
     const [isLoadingToken, setIsLoadingToken] = useState(true);
     const [isEditMode, setIsEditMode] = useState(false);
 
-
     const paymentOptions = [
         { value: "paybill", label: "Paybill" },
-        { value: "till", label: "Till Number" },
+        //{ value: "till", label: "Till Number" }, // Removed till option
     ];
 
     useEffect(() => {
@@ -1976,6 +2084,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 } else {
                     console.warn("No access token found in localStorage.");
                     onError("Authentication required. Please login.");
+                    toast.error("Authentication required. Please login.");
                     // router.push("/?page=login"); // Redirect to login
                     return;
                 }
@@ -2000,14 +2109,16 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                             setAmount(billData.amount);
                             setPaymentOption(billData.payment_option);
                             setPaybillNumber(billData.paybill_number || "");
-                            setTillNumber(billData.till_number || "");
+                            //setTillNumber(billData.till_number || ""); //Removed tillNumber
                             setAccountNumber(billData.account_number || "");
                             setDueDate(billData.due_date);
                         } else {
                             onError("Failed to fetch bill for editing.");
+                            toast.error("Failed to fetch bill for editing.");
                         }
                     } catch (err) {
                         onError("An error occurred while fetching the bill.");
+                        toast.error("An error occurred while fetching the bill.");
                         console.error(err);
                     }
                 } else {
@@ -2018,6 +2129,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 onError(
                     "localStorage is not available. Please enable cookies or use a different browser."
                 );
+                toast.error("localStorage is not available. Please enable cookies or use a different browser.");
                 setIsLoadingToken(false);
             }
         };
@@ -2030,16 +2142,19 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
 
         if (isLoadingToken) {
             onError("Please wait while the authentication token is loaded.");
+            toast.error("Please wait while the authentication token is loaded.");
             return;
         }
 
         if (!accessToken) {
             onError("Authentication required. Please login.");
+            toast.error("Authentication required. Please login.");
             return;
         }
 
         if (!billType || !amount || !paymentOption || !dueDate) {
             onError("Please fill in all required fields.");
+            toast.error("Please fill in all required fields.");
             return;
         }
 
@@ -2047,14 +2162,16 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
         if (paymentOption === "paybill") {
             if (!paybillNumber || !accountNumber) {
                 onError("Paybill requires both Paybill Number and Account Number.");
+                toast.error("Paybill requires both Paybill Number and Account Number.");
                 return;
             }
-        } else if (paymentOption === "till") {
+        } /*else if (paymentOption === "till") { // Removed tillValidation
             if (!tillNumber) {
                 onError("Till Number is required for Till payment.");
+                toast.error("Till Number is required for Till payment.");
                 return;
             }
-        }
+        }*/
 
         try {
             const url = editBillId
@@ -2073,9 +2190,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
             if (paymentOption === "paybill") {
                 requestBody.paybill_number = paybillNumber;
                 requestBody.account_number = accountNumber;
-            } else if (paymentOption === "till") {
+            } /*else if (paymentOption === "till") { // removed till number from request
                 requestBody.till_number = tillNumber;
-            }
+            }*/
 
             const response = await fetch(url, {
                 method: method,
@@ -2097,19 +2214,22 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 // setAmount("");
                 // setPaymentOption("");
                 // setPaybillNumber("");
-                // setTillNumber("");
+                // setTillNumber(""); // removed tillNumber
                 // setAccountNumber("");
                 // setDueDate("");
 
                 // localStorage.removeItem("isFirstTimeUser");
+                toast.success(editBillId ? "Bill updated successfully!" : "Bill added successfully!");
                 onBillUpdated(); // Notify parent component to refresh bills
                 onClose();
             } else {
                 onError(data.message || "Failed to add bill.");
+                toast.error(data.message || "Failed to add bill.");
                 // setSuccessMessage("");
             }
         } catch (err) {
             onError("An error occurred while adding the bill.");
+            toast.error("An error occurred while adding the bill.");
             // setSuccessMessage("");
             console.error(err);
         }
@@ -2258,9 +2378,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                     </div>
                 </>
             )}
- 
+
             {/* Till Number Field */}
-            {paymentOption === "till" && (
+           {/* {paymentOption === "till" && (  //removed till number section
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="tillNumber">
                         Till Number
@@ -2274,8 +2394,8 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                         onChange={(e) => setTillNumber(e.target.value)}
                     />
                 </div>
-            )}
- 
+            )}*/}
+
             {/* Due Date */}
             <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dueDate">
@@ -2289,7 +2409,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                     onChange={(e) => setDueDate(e.target.value)}
                 />
             </div>
- 
+
             {/* Submit & Cancel Buttons */}
             <div className="flex justify-end space-x-4">
                 <button
@@ -2309,11 +2429,12 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
         </form>
     );
  };
- 
+
  export default ManageBills;
 ================================================================================
 File: ./components/dashboard/Settings.tsx
 ================================================================================
+// File: ./components/dashboard/Settings.tsx
 // app/src/components/dashboard/Settings.tsx
 'use client';
 
@@ -2369,9 +2490,11 @@ export default Settings;
 ================================================================================
 File: ./app/layout.tsx
 ================================================================================
+// File: ./app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'sonner'; // Import Toaster
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -2391,6 +2514,7 @@ export default function RootLayout({
         <div className="min-h-screen flex flex-col">
           {/* Add a header/navigation here if needed */}
           <main className="flex-grow">{children}</main>
+            <Toaster richColors /> {/* Add Toaster here */}
           {/* Add a footer here if needed */}
         </div>
       </body>
@@ -2400,6 +2524,7 @@ export default function RootLayout({
 ================================================================================
 File: ./app/page.tsx
 ================================================================================
+// File: ./app/page.tsx
 // app/page.tsx
 'use client';
 
@@ -2414,6 +2539,8 @@ import Notifications from '@/components/dashboard/Notifications';
 import Settings from '@/components/dashboard/Settings';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useEffect, useState } from "react";
+import { Clock } from 'lucide-react'; // Import Clock icon
+
 
 export default function HomePage() {
     const searchParams = useSearchParams();
@@ -2457,7 +2584,11 @@ export default function HomePage() {
     };
 
     if (isLoading) {
-        return <div>Loading...</div>; // Show a loading indicator while checking localStorage
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Clock className="animate-spin mr-2" /> Loading...
+            </div>
+        ); // Show a loading indicator while checking localStorage
     }
 
     if (page === 'dashboard') {

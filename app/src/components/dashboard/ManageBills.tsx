@@ -1,12 +1,15 @@
+// File: ./components/dashboard/ManageBills.tsx
 // ManageBills.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit, Trash2, DollarSign, Plus, Lightbulb, Home, Droplet, Wifi, } from 'lucide-react'; // Added Plus icon, icon here
+import { Edit, Trash2, DollarSign, Plus, Lightbulb, Home, Droplet, Wifi, Calendar, AlertTriangle, Clock } from 'lucide-react'; // Added Plus icon, icon here
 import { Transition } from "@headlessui/react";
 import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner'; // Import toast
+import { ClipLoader } from 'react-spinners'; // Import ClipLoader
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -31,6 +34,8 @@ const ManageBills = () => {
     const [showError, setShowError] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth()); // Current month, 0-indexed
     const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
+    const [isPaying, setIsPaying] = useState(false);  // Payment loading state
+    const [payingBillId, setPayingBillId] = useState<string | null>(null); // Track the bill being paid
 
     interface BillType {
         value: string;
@@ -64,13 +69,14 @@ const ManageBills = () => {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 setError('No access token found. Please log in.');
+                toast.error('No access token found. Please log in.');
                 return;
             }
 
             const response = await fetch(`${API_BASE_URL}/bills/`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
+                    'Content-Type': `application/json`,
                 },
             });
 
@@ -90,6 +96,7 @@ const ManageBills = () => {
             setShowError(true);
             setError(`Failed to fetch data: ${e.message}`);
             console.error("Fetch error:", e);
+            toast.error(`Failed to fetch data: ${e.message}`);
         }
     };
 
@@ -115,6 +122,7 @@ const ManageBills = () => {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 setError('No access token found. Please log in.');
+                toast.error('No access token found. Please log in.');
                 return;
             }
 
@@ -132,8 +140,10 @@ const ManageBills = () => {
 
             setBills(bills.filter(bill => bill.id !== billId));
             await fetchBills(); // Refresh bills after deletion
+            toast.success("Bill deleted successfully!");
         } catch (e: any) {
             setError(`Failed to delete bill: ${e.message}`);
+            toast.error(`Failed to delete bill: ${e.message}`);
         }
     };
 
@@ -144,40 +154,51 @@ const ManageBills = () => {
 
     // Functions for handling payments
     const handlePayBill = async (billId: string) => {
-        try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setError('No access token found. Please log in.');
-                return;
-            }
+    setPayingBillId(billId); // Set the ID of the bill being paid
+    setIsPaying(true); // Start loading
 
-            const response = await fetch(`${API_BASE_URL}/payments/pay`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ bill_id: billId }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-              //Payment initiated, set time out to pull data after
-                window.alert("Payment initiated. Check your phone for the prompt.");
-                 setTimeout(() => {
-                  fetchBills();  // Refetch bills *after* the payment is initiated
-                }, 5000); // Delay to give callback time to process
-                console.log('Payment initiated', data);
-            } else {
-                setError(`Payment failed: ${data.message || 'Unknown error'}`);
-                window.alert(`Payment failed: ${data.message || 'Unknown error'}`);
-            }
-        } catch (e: any) {
-            setError(`An error occurred: ${e.message}`);
-            window.alert(`An error occurred: ${e.message}`);
+    try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            setError('No access token found. Please log in.');
+            toast.error('No access token found. Please log in.');
+            return;
         }
-    };
+
+        const response = await fetch(`${API_BASE_URL}/payments/pay`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ bill_id: billId }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            toast.success("Payment initiated. Check your phone for the prompt.");
+            // Optionally, set a timeout to check the payment status after a certain duration
+            setTimeout(() => {
+                fetchBills();  // Refetch bills *after* the payment is initiated
+                setIsPaying(false);
+                setPayingBillId(null);
+            }, 15000); // e.g., 15 seconds
+
+        } else {
+            setError(`Payment failed: ${data.message || 'Unknown error'}`);
+            toast.error(`Payment failed: ${data.message || 'Unknown error'}`);
+        }
+    } catch (e: any) {
+        setError(`An error occurred: ${e.message}`);
+        toast.error(`An error occurred: ${e.message}`);
+    } finally {
+         if (payingBillId === billId) {
+             setIsPaying(false); // Ensure loading is stopped even on error
+             setPayingBillId(null);
+          }
+    }
+};
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -218,7 +239,7 @@ const ManageBills = () => {
                     <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center justify-between">
                         <span>Add New Bill</span>
                         <button
-                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center"
                             onClick={() => {
                                 setEditBillId(null); // Reset editBillId when adding a new bill
                                 setIsModalOpen(true);
@@ -250,33 +271,63 @@ const ManageBills = () => {
                 {filteredBills.length > 0 ? (
                     <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
                         <h3 className="text-lg font-medium mb-2 text-gray-700">Your Bills for {monthNames[selectedMonth]}</h3>
-                        <ul>
-                            {filteredBills.map(bill => (
-                                <li key={bill.id} className="py-2 border-b flex items-center justify-between">
-                                    {bill.bill_type} - Due: {format(parseISO(bill.due_date), 'PPP')} - Amount: ${bill.amount} - Status: {bill.status}
-                                    <div>
-                                        <button
-                                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded mr-2"
-                                            onClick={() => handleEditBill(bill.id)}
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 rounded mr-2"
-                                            onClick={() => handleDeleteBill(bill.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-2 rounded"
-                                            onClick={() => handlePayBill(bill.id)}
-                                        >
-                                            <DollarSign className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                           <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="px-4 py-2 text-left text-gray-600">Type</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Due Date</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Amount</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Status</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredBills.map(bill => (
+                                        <tr key={bill.id} className="border-b">
+                                            <td className="px-4 py-2 text-gray-700">{bill.bill_type}</td>
+                                            <td className="px-4 py-2 text-gray-700">{format(parseISO(bill.due_date), 'PPP')}</td>
+                                            <td className="px-4 py-2 text-gray-700">Ksh {bill.amount}</td>
+                                             <td className="px-4 py-2 text-gray-700">
+                                                 {isPaying && payingBillId === bill.id ? (
+                                                    <div className="flex items-center">
+                                                        <Clock className="animate-spin mr-2" /> Paying...
+                                                    </div>
+                                                 ) : bill.status}
+                                             </td>
+
+                                            <td className="px-4 py-2 text-gray-700">
+                                                 <div className="flex items-center">
+                                                    <button
+                                                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 rounded mr-2 flex items-center"
+                                                        onClick={() => handleEditBill(bill.id)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                        </button>
+                                                    <button
+                                                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 rounded mr-2 flex items-center"
+                                                        onClick={() => handleDeleteBill(bill.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        className={`bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-2 rounded flex items-center ${isPaying && payingBillId === bill.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        onClick={() => handlePayBill(bill.id)}
+                                                        disabled={isPaying && payingBillId === bill.id}
+                                                    >
+                                                         {isPaying && payingBillId === bill.id ? (
+                                                            <ClipLoader color="#ffffff" size={16} />
+                                                        ) : (
+                                                            <><DollarSign className="h-4 w-4" /> </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </motion.div>
                 ) : (
                     <motion.div className="bg-white shadow-md rounded-md p-4" variants={itemVariants}>
@@ -334,7 +385,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
     const [amount, setAmount] = useState("");
     const [paymentOption, setPaymentOption] = useState("");
     const [paybillNumber, setPaybillNumber] = useState("");
-    const [tillNumber, setTillNumber] = useState("");
+    //const [tillNumber, setTillNumber] = useState(""); //Removed tillNumber
     const [accountNumber, setAccountNumber] = useState("");
     const [dueDate, setDueDate] = useState("");
     const [isBillTypeOpen, setIsBillTypeOpen] = useState(false);
@@ -343,10 +394,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
     const [isLoadingToken, setIsLoadingToken] = useState(true);
     const [isEditMode, setIsEditMode] = useState(false);
 
-
     const paymentOptions = [
         { value: "paybill", label: "Paybill" },
-        { value: "till", label: "Till Number" },
+        //{ value: "till", label: "Till Number" }, // Removed till option
     ];
 
     useEffect(() => {
@@ -359,6 +409,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 } else {
                     console.warn("No access token found in localStorage.");
                     onError("Authentication required. Please login.");
+                    toast.error("Authentication required. Please login.");
                     // router.push("/?page=login"); // Redirect to login
                     return;
                 }
@@ -383,14 +434,16 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                             setAmount(billData.amount);
                             setPaymentOption(billData.payment_option);
                             setPaybillNumber(billData.paybill_number || "");
-                            setTillNumber(billData.till_number || "");
+                            //setTillNumber(billData.till_number || ""); //Removed tillNumber
                             setAccountNumber(billData.account_number || "");
                             setDueDate(billData.due_date);
                         } else {
                             onError("Failed to fetch bill for editing.");
+                            toast.error("Failed to fetch bill for editing.");
                         }
                     } catch (err) {
                         onError("An error occurred while fetching the bill.");
+                        toast.error("An error occurred while fetching the bill.");
                         console.error(err);
                     }
                 } else {
@@ -401,6 +454,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 onError(
                     "localStorage is not available. Please enable cookies or use a different browser."
                 );
+                toast.error("localStorage is not available. Please enable cookies or use a different browser.");
                 setIsLoadingToken(false);
             }
         };
@@ -413,16 +467,19 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
 
         if (isLoadingToken) {
             onError("Please wait while the authentication token is loaded.");
+            toast.error("Please wait while the authentication token is loaded.");
             return;
         }
 
         if (!accessToken) {
             onError("Authentication required. Please login.");
+            toast.error("Authentication required. Please login.");
             return;
         }
 
         if (!billType || !amount || !paymentOption || !dueDate) {
             onError("Please fill in all required fields.");
+            toast.error("Please fill in all required fields.");
             return;
         }
 
@@ -430,14 +487,16 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
         if (paymentOption === "paybill") {
             if (!paybillNumber || !accountNumber) {
                 onError("Paybill requires both Paybill Number and Account Number.");
+                toast.error("Paybill requires both Paybill Number and Account Number.");
                 return;
             }
-        } else if (paymentOption === "till") {
+        } /*else if (paymentOption === "till") { // Removed tillValidation
             if (!tillNumber) {
                 onError("Till Number is required for Till payment.");
+                toast.error("Till Number is required for Till payment.");
                 return;
             }
-        }
+        }*/
 
         try {
             const url = editBillId
@@ -456,9 +515,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
             if (paymentOption === "paybill") {
                 requestBody.paybill_number = paybillNumber;
                 requestBody.account_number = accountNumber;
-            } else if (paymentOption === "till") {
+            } /*else if (paymentOption === "till") { // removed till number from request
                 requestBody.till_number = tillNumber;
-            }
+            }*/
 
             const response = await fetch(url, {
                 method: method,
@@ -480,19 +539,22 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                 // setAmount("");
                 // setPaymentOption("");
                 // setPaybillNumber("");
-                // setTillNumber("");
+                // setTillNumber(""); // removed tillNumber
                 // setAccountNumber("");
                 // setDueDate("");
 
                 // localStorage.removeItem("isFirstTimeUser");
+                toast.success(editBillId ? "Bill updated successfully!" : "Bill added successfully!");
                 onBillUpdated(); // Notify parent component to refresh bills
                 onClose();
             } else {
                 onError(data.message || "Failed to add bill.");
+                toast.error(data.message || "Failed to add bill.");
                 // setSuccessMessage("");
             }
         } catch (err) {
             onError("An error occurred while adding the bill.");
+            toast.error("An error occurred while adding the bill.");
             // setSuccessMessage("");
             console.error(err);
         }
@@ -641,9 +703,9 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                     </div>
                 </>
             )}
- 
+
             {/* Till Number Field */}
-            {paymentOption === "till" && (
+           {/* {paymentOption === "till" && (  //removed till number section
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="tillNumber">
                         Till Number
@@ -657,8 +719,8 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                         onChange={(e) => setTillNumber(e.target.value)}
                     />
                 </div>
-            )}
- 
+            )}*/}
+
             {/* Due Date */}
             <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dueDate">
@@ -672,7 +734,7 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
                     onChange={(e) => setDueDate(e.target.value)}
                 />
             </div>
- 
+
             {/* Submit & Cancel Buttons */}
             <div className="flex justify-end space-x-4">
                 <button
@@ -692,5 +754,5 @@ const BillFormModal: React.FC<BillFormModalProps> = ({ editBillId, onClose, onBi
         </form>
     );
  };
- 
+
  export default ManageBills;

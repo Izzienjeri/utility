@@ -1,3 +1,4 @@
+// File: ./app/page.tsx
 // app/page.tsx
 'use client';
 
@@ -12,6 +13,8 @@ import Notifications from '@/components/dashboard/Notifications';
 import Settings from '@/components/dashboard/Settings';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useEffect, useState } from "react";
+import { Clock } from 'lucide-react'; // Import Clock icon
+
 
 export default function HomePage() {
     const searchParams = useSearchParams();
@@ -55,7 +58,11 @@ export default function HomePage() {
     };
 
     if (isLoading) {
-        return <div>Loading...</div>; // Show a loading indicator while checking localStorage
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Clock className="animate-spin mr-2" /> Loading...
+            </div>
+        ); // Show a loading indicator while checking localStorage
     }
 
     if (page === 'dashboard') {

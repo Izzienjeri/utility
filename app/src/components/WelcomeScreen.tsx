@@ -1,3 +1,4 @@
+// File: ./components/WelcomeScreen.tsx
 // app/src/components/WelcomeScreen.tsx
 'use client';
 

@@ -1,4 +1,4 @@
-// app/src/components/Auth.tsx
+// File: ./components/Auth.tsx
 "use client";
 
 import { useState } from "react";
@@ -13,6 +13,7 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
+import { toast } from "sonner";  // Import toast
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -38,7 +39,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      //setError("Please enter both email and password.");
+      toast.error("Please enter both email and password.");
       return;
     }
 
@@ -68,10 +70,12 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           router.push("/?page=dashboard&ion=overview"); // Reload the page
         }
       } else {
-        setError(data.message || "Login failed.");
+        //setError(data.message || "Login failed.");
+        toast.error(data.message || "Login failed.");
       }
     } catch (err) {
-      setError("An error occurred during login.");
+      //setError("An error occurred during login.");
+      toast.error("An error occurred during login.");
       console.error(err);
     }
   };
@@ -80,12 +84,14 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
     e.preventDefault();
 
     if (!fullName || !email || !phone || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
+      //setError("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      //setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
@@ -108,7 +114,8 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
         // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
-        setSuccessMessage(data.message || "Registration successful!");
+        //setSuccessMessage(data.message || "Registration successful!");
+        toast.success(data.message || "Registration successful!");
         setError("");
         router.push("/?page=welcome"); // Redirect to welcome first
         // END NEW CODE
@@ -117,15 +124,18 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
           const errorMessages = Object.entries(data.errors)
             .map(([field, message]) => `${field}: ${message}`)
             .join(", ");
-          setError(`Registration failed: ${errorMessages}`);
+          //setError(`Registration failed: ${errorMessages}`);
+          toast.error(`Registration failed: ${errorMessages}`);
         } else {
-          setError(data.message || "Registration failed.");
+          //setError(data.message || "Registration failed.");
+          toast.error(data.message || "Registration failed.");
         }
         setSuccessMessage("");
         console.error("Registration error:", data);
       }
     } catch (err) {
-      setError("An error occurred during registration.");
+      //setError("An error occurred during registration.");
+      toast.error("An error occurred during registration.");
       setSuccessMessage("");
       console.error("Registration fetch error:", err);
     }
