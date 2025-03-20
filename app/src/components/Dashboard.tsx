@@ -1,4 +1,3 @@
-// components/Dashboard.tsx
 "use client";
 
 import { useState } from "react";
@@ -7,7 +6,7 @@ import ManageBills from "./dashboard/ManageBills";
 import Notifications from "./dashboard/Notifications";
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState("overview"); // Default to overview
+  const [activeTab, setActiveTab] = useState("overview");
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -15,13 +14,12 @@ const Dashboard = () => {
 
   return (
     <div className="container mx-auto py-8">
-      {/* Tab Navigation */}
       <div className="mb-4">
         <nav className="flex space-x-4">
           <button
             className={`px-4 py-2 rounded-md text-gray-700 ${
               activeTab === "overview"
-                ? "bg-teal-500 text-white font-semibold" // Highlight active tab
+                ? "bg-teal-500 text-white font-semibold"
                 : "bg-gray-100 hover:bg-gray-200"
             }`}
             onClick={() => handleTabChange("overview")}

@@ -1,4 +1,3 @@
-// app/src/components/WelcomeScreen.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -59,9 +58,7 @@ const WelcomeScreen = () => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <Heart className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Welcome to PayTrack!
-              </h2>
+              <h2 className="text-2xl font-semibold ">Welcome to PayTrack!</h2>
               <p className="text-gray-300 mt-1 text-center">
                 Simplify your bill payments and stay on top of your expenses.
               </p>

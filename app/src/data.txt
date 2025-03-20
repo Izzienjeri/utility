@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 interface AuthProps {
   initialRoute: "login" | "register" | "billForm" | "dashboard" | "welcome";
@@ -55,18 +55,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       const data = await response.json();
 
       if (response.ok) {
-        const accessToken = data.access_token; // Extract token
+        const accessToken = data.access_token;
         localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("userName", data.user.full_name); // Store the user's name
+        localStorage.setItem("userName", data.user.full_name);
 
-        // Extract is_new_user from the response
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
 
         if (isNewUser) {
-          router.push("/?page=welcome"); // Redirect to welcome
+          router.push("/?page=welcome");
         } else {
-          router.push("/?page=dashboard&ion=overview"); // Reload the page
+          router.push("/?page=dashboard&ion=overview");
         }
       } else {
         toast.error(data.message || "Login failed.");
@@ -102,17 +101,15 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       const data = await response.json();
 
       if (response.ok) {
-        const accessToken = data.access_token; // Extract token
+        const accessToken = data.access_token;
         localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("userName", data.user.full_name); // Store the user's name
+        localStorage.setItem("userName", data.user.full_name);
 
-        // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
         toast.success(data.message || "Registration successful!");
         setError("");
-        router.push("/?page=welcome"); // Redirect to welcome first
-        // END NEW CODE
+        router.push("/?page=welcome");
       } else {
         if (data.errors) {
           const errorMessages = Object.entries(data.errors)
@@ -191,9 +188,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <Lock className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Welcome Back
-              </h2>
+              <h2 className="text-2xl font-semibold ">Welcome Back</h2>
               <p className="text-gray-300 mt-1 text-center">
                 Sign in to access your account
               </p>
@@ -313,9 +308,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <UserPlus className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Create Account
-              </h2>
+              <h2 className="text-2xl font-semibold ">Create Account</h2>
               <p className="text-gray-300 mt-1 text-center">Join us today!</p>
             </motion.div>
 
@@ -508,10 +501,10 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
 };
 
 export default Auth;
+
 ================================================================================
 File: ./components/WelcomeScreen.tsx
 ================================================================================
-// app/src/components/WelcomeScreen.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -572,9 +565,7 @@ const WelcomeScreen = () => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <Heart className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Welcome to PayTrack!
-              </h2>
+              <h2 className="text-2xl font-semibold ">Welcome to PayTrack!</h2>
               <p className="text-gray-300 mt-1 text-center">
                 Simplify your bill payments and stay on top of your expenses.
               </p>
@@ -606,10 +597,10 @@ const WelcomeScreen = () => {
 };
 
 export default WelcomeScreen;
+
 ================================================================================
 File: ./components/Dashboard.tsx
 ================================================================================
-// components/Dashboard.tsx
 "use client";
 
 import { useState } from "react";
@@ -618,7 +609,7 @@ import ManageBills from "./dashboard/ManageBills";
 import Notifications from "./dashboard/Notifications";
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState("overview"); // Default to overview
+  const [activeTab, setActiveTab] = useState("overview");
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -626,13 +617,12 @@ const Dashboard = () => {
 
   return (
     <div className="container mx-auto py-8">
-      {/* Tab Navigation */}
       <div className="mb-4">
         <nav className="flex space-x-4">
           <button
             className={`px-4 py-2 rounded-md text-gray-700 ${
               activeTab === "overview"
-                ? "bg-teal-500 text-white font-semibold" // Highlight active tab
+                ? "bg-teal-500 text-white font-semibold"
                 : "bg-gray-100 hover:bg-gray-200"
             }`}
             onClick={() => handleTabChange("overview")}
@@ -673,10 +663,10 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
 ================================================================================
 File: ./components/BillForm.tsx
 ================================================================================
-// app/src/components/BillForm.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -692,9 +682,9 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
-import { toast } from "sonner"; // Import toast from sonner
+import { toast } from "sonner";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 interface BillFormProps {
   userId: string;
@@ -714,7 +704,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);  // NEW STATE
+  const [isRecurring, setIsRecurring] = useState(false);
 
   const billTypes = [
     {
@@ -797,28 +787,27 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     }
   }, [router, editBillId]);
 
-  // NEW FUNCTION: CREATE RECURRING BILLS
   const createRecurringBills = async (baseBill: any, token: string) => {
     const billsToCreate = [];
     let nextDueDate = new Date(baseBill.due_date);
 
-    for (let i = 1; i <= 11; i++) {  // Create for next 11 months
+    for (let i = 1; i <= 11; i++) {
       nextDueDate.setMonth(nextDueDate.getMonth() + 1);
       const newBill = {
         ...baseBill,
-        due_date: nextDueDate.toISOString().split('T')[0], // Format to YYYY-MM-DD
+        due_date: nextDueDate.toISOString().split("T")[0],
       };
       billsToCreate.push(newBill);
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/bills/`, {  // Use the SAME endpoint.  Backend handles array.
-        method: 'POST', // Backend needs to accept an array of bills here!
+      const response = await fetch(`${API_BASE_URL}/bills/`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(billsToCreate), // Send the array to the backend
+        body: JSON.stringify(billsToCreate),
       });
 
       const data = await response.json();
@@ -854,7 +843,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       return;
     }
 
-    // Validate Paybill and Account Number
     if (!paybillNumber || !accountNumber) {
       toast.error("Paybill requires both Paybill Number and Account Number.");
       return;
@@ -866,11 +854,10 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         : `${API_BASE_URL}/bills/`;
       const method = editBillId ? "PUT" : "POST";
 
-      // Construct the request body.  Only include the relevant payment details.
       const requestBody: any = {
         bill_type: billType,
         amount: amount,
-        payment_option: "paybill", // Always paybill
+        payment_option: "paybill",
         paybill_number: paybillNumber,
         account_number: accountNumber,
         due_date: dueDate,
@@ -901,11 +888,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
 
-        // NEW: Create recurring bills if toggled
-        if (isRecurring && !editBillId) { // Don't create recurring on edits
-          await createRecurringBills(requestBody, accessToken); // Pass the base bill
+        if (isRecurring && !editBillId) {
+          await createRecurringBills(requestBody, accessToken);
         }
-
       } else {
         toast.error(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -1137,7 +1122,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                       className="mr-2 h-5 w-5 text-teal-500 focus:ring-teal-300"
                       checked={isRecurring}
                       onChange={(e) => setIsRecurring(e.target.checked)}
-                      disabled={isEditMode} // Disable on edit
+                      disabled={isEditMode}
                     />
                     <span className="text-gray-200 text-sm font-medium">
                       Create Recurring Bills (Next 11 Months)
@@ -1172,10 +1157,10 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
 };
 
 export default BillForm;
+
 ================================================================================
 File: ./components/NavBar.tsx
 ================================================================================
-// components/NavBar.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -1201,8 +1186,8 @@ const NavBar = () => {
         <motion.button
           className="text-gray-700 hover:text-gray-900 flex items-center"
           onClick={handleLogout}
-          whileHover={{ scale: 1.05 }} // Optional: Add a hover effect
-          whileTap={{ scale: 0.95 }} // Optional: Add a tap effect
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Logout
@@ -1213,10 +1198,10 @@ const NavBar = () => {
 };
 
 export default NavBar;
+
 ================================================================================
 File: ./components/dashboard/Notifications.tsx
 ================================================================================
-// app/src/components/dashboard/Notifications.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -1297,11 +1282,10 @@ const Notifications = () => {
 };
 
 export default Notifications;
+
 ================================================================================
 File: ./components/dashboard/Overview.tsx
 ================================================================================
-// File: ./components/dashboard/Overview.tsx
-// app/src/components/dashboard/Overview.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -1324,7 +1308,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 interface Bill {
   id: string;
@@ -1373,7 +1357,7 @@ const Overview = () => {
   }
 
   const paymentStatusIcons: {
-    [key: string]: PaymentStatusIcons
+    [key: string]: PaymentStatusIcons;
   } = {
     Completed: { icon: CheckCircle, color: "text-green-500" },
     Pending: { icon: Clock, color: "text-yellow-500" },
@@ -1387,12 +1371,17 @@ const Overview = () => {
       value: "Electricity",
       icon: <Lightbulb className="inline-block mr-1" size={16} />,
     },
-    Rent: { value: "Rent", icon: <Home className="inline-block mr-1" size={16} /> },
+    Rent: {
+      value: "Rent",
+      icon: <Home className="inline-block mr-1" size={16} />,
+    },
     Water: {
       value: "Water",
       icon: <Droplet className="inline-block mr-1" size={16} />,
     },
-    WiFi: { value: "WiFi", icon: <Wifi className="inline-block mr-1" size={16} />,
+    WiFi: {
+      value: "WiFi",
+      icon: <Wifi className="inline-block mr-1" size={16} />,
     },
     Trash: {
       value: "Trash",
@@ -1401,7 +1390,7 @@ const Overview = () => {
   };
 
   const billCardColors: { [key: string]: string } = {
-    Electricity: "bg-yellow-50",    // Light pastel colors
+    Electricity: "bg-yellow-50",
     Rent: "bg-red-50",
     Water: "bg-blue-50",
     WiFi: "bg-purple-50",
@@ -1453,212 +1442,237 @@ const Overview = () => {
         const total = upcoming.reduce((sum: number, bill: Bill) => {
           if (bill.status === "Pending") {
             return sum + bill.amount;
-        }
-        return sum;
-      }, 0);
-      setTotalDue(total);
-
-      const transactionsResponse = await fetch(
-        `${API_BASE_URL}/payments/history`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!transactionsResponse.ok) {
-        console.warn("Failed to fetch transactions.");
-        setRecentTransactions([]);
-        toast.error("Failed to fetch transactions.");
-      } else {
-        let transactionsData: Transaction[] =
-          await transactionsResponse.json();
-        setRecentTransactions(transactionsData);
-
-        // Create a map of bill details for easy access
-        const billMap: { [billId: string]: Bill } = {};
-        transactionsData.forEach((transaction) => {
-          if (transaction.bill) {
-            billMap[transaction.bill.id] = transaction.bill;
           }
-        });
-        setBillDetails(billMap);
+          return sum;
+        }, 0);
+        setTotalDue(total);
+
+        const transactionsResponse = await fetch(
+          `${API_BASE_URL}/payments/history`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!transactionsResponse.ok) {
+          console.warn("Failed to fetch transactions.");
+          setRecentTransactions([]);
+          toast.error("Failed to fetch transactions.");
+        } else {
+          let transactionsData: Transaction[] =
+            await transactionsResponse.json();
+          setRecentTransactions(transactionsData);
+
+          const billMap: { [billId: string]: Bill } = {};
+          transactionsData.forEach((transaction) => {
+            if (transaction.bill) {
+              billMap[transaction.bill.id] = transaction.bill;
+            }
+          });
+          setBillDetails(billMap);
+        }
+      } catch (e: any) {
+        setError(`Failed to fetch data: ${e.message}`);
+        console.error("Error fetching data:", e);
+        setRecentTransactions([]);
+        toast.error(`Failed to fetch data: ${e.message}`);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e: any) {
-      setError(`Failed to fetch data: ${e.message}`);
-      console.error("Error fetching data:", e);
-      setRecentTransactions([]);
-      toast.error(`Failed to fetch data: ${e.message}`);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    fetchBills();
+  }, []);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
   };
 
-  fetchBills();
-}, []);
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.5,
-      when: "beforeChildren",
-      staggerChildren: 0.1,
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
     },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.3 },
-  },
-};
+  };
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
-  },
-};
-
-return (
-  <motion.div
-    variants={containerVariants}
-    initial="hidden"
-    animate="visible"
-    exit="exit"
-  >
-    {/* Welcome Message */}
-    <motion.div className="mb-4" variants={itemVariants}> {/* Reduced margin */}
-      <h2 className="text-2xl font-semibold text-gray-800">
-        Welcome back, {localStorage.getItem("userName") || "User"}!
-      </h2>
-      <p className="text-gray-600">Here's a summary of your bills.</p>
-    </motion.div>
-
-    {isLoading ? (
-      <div className="flex items-center justify-center">
-        <Clock className="animate-spin mr-2" /> Loading data...
-      </div>
-    ) : null}
-
-    {error && <div className="text-red-500 mb-4">Error: {error}</div>}
-
-    {/* Billing Card */}
+  return (
     <motion.div
-      className="bg-gradient-to-br from-blue-900 to-teal-500 text-white rounded-xl shadow-md p-4 mb-4" // More rounded
-      variants={itemVariants}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
     >
-      <h3 className="text-xl font-semibold mb-1">Total Due</h3> {/* Reduced margin */}
-      <p className="text-3xl font-bold">Ksh {totalDue}</p> {/* Adjusted size */}
-      <p className="text-sm mt-1">Due within the next 10 days.</p>  {/* Reduced margin */}
-    </motion.div>
+      {/* Welcome Message */}
+      <motion.div className="mb-4" variants={itemVariants}>
+        {" "}
+        {/* Reduced margin */}
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Welcome back, {localStorage.getItem("userName") || "User"}!
+        </h2>
+        <p className="text-gray-600">Here's a summary of your bills.</p>
+      </motion.div>
 
-    {/* Grid Section for Individual Bills */}
-    <motion.div
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-      variants={itemVariants}
-    >
-      {upcomingBills.map((bill) => (
-        <motion.div
-          key={bill.id}
-          className={`rounded-xl shadow-md p-3 flex flex-col justify-between ${
-            billCardColors[bill.bill_type] || "bg-gray-50"
-          } border border-gray-200`} // Lighter background, border
-          whileHover={{ scale: 1.05, boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)" }} // Enhanced hover
-          whileTap={{ scale: 0.98 }}
-        >
-          <div>
-            <h4 className="text-lg font-semibold text-gray-700 flex items-center mb-1"> {/* Added margin */}
-              {billTypeIcons[bill.bill_type]?.icon}
-              {bill.bill_type}
-            </h4>
-            <p className="text-gray-500 text-sm"> {/* Adjusted color */}
-              Due: {format(parseISO(bill.due_date), "MMM dd, yyyy")}
-            </p>
-            <p className="text-gray-800 font-bold text-xl mt-2">Ksh {bill.amount}</p> {/* Adjusted size and margin */}
-          </div>
-          <button
-            onClick={() => router.push(`/?page=dashboard&ion=manage-bills`)}
-            className="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-md mt-3 text-sm" // More padding, font weight
+      {isLoading ? (
+        <div className="flex items-center justify-center">
+          <Clock className="animate-spin mr-2" /> Loading data...
+        </div>
+      ) : null}
+
+      {error && <div className="text-red-500 mb-4">Error: {error}</div>}
+
+      {/* Billing Card */}
+      <motion.div
+        className="bg-gradient-to-br from-blue-900 to-teal-500 text-white rounded-xl shadow-md p-4 mb-4"
+        variants={itemVariants}
+      >
+        <h3 className="text-xl font-semibold mb-1">Total Due</h3>{" "}
+        {/* Reduced margin */}
+        <p className="text-3xl font-bold">Ksh {totalDue}</p>{" "}
+        {/* Adjusted size */}
+        <p className="text-sm mt-1">Due within the next 10 days.</p>{" "}
+        {/* Reduced margin */}
+      </motion.div>
+
+      {/* Grid Section for Individual Bills */}
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        variants={itemVariants}
+      >
+        {upcomingBills.map((bill) => (
+          <motion.div
+            key={bill.id}
+            className={`rounded-xl shadow-md p-3 flex flex-col justify-between ${
+              billCardColors[bill.bill_type] || "bg-gray-50"
+            } border border-gray-200`}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+            }}
+            whileTap={{ scale: 0.98 }}
           >
-            Pay Now
-          </button>
-        </motion.div>
-      ))}
-    </motion.div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-700 flex items-center mb-1">
+                {" "}
+                {/* Added margin */}
+                {billTypeIcons[bill.bill_type]?.icon}
+                {bill.bill_type}
+              </h4>
+              <p className="text-gray-500 text-sm">
+                {" "}
+                {/* Adjusted color */}
+                Due: {format(parseISO(bill.due_date), "MMM dd, yyyy")}
+              </p>
+              <p className="text-gray-800 font-bold text-xl mt-2">
+                Ksh {bill.amount}
+              </p>{" "}
+              {/* Adjusted size and margin */}
+            </div>
+            <button
+              onClick={() => router.push(`/?page=dashboard&ion=manage-bills`)}
+              className="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-md mt-3 text-sm"
+            >
+              Pay Now
+            </button>
+          </motion.div>
+        ))}
+      </motion.div>
 
-    {/* Recent Transactions Section (moved to the bottom) */}
-    <motion.div
-      className="bg-white shadow-md rounded-xl p-4 mt-6" // More rounded
-      variants={itemVariants}
-    >
-      <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center">
-        <Clock className="mr-2" /> Recent Transactions
-      </h3>
-      {recentTransactions.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="bg-gray-50">  
-                <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">
-                  Bill Type
-                </th>
-                <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">Date</th>
-                <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">Amount</th>
-                <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentTransactions.map((transaction) => {
-                const formattedDate = format(
-                  new Date(transaction.paid_at),
-                  "MMM dd, yyyy, h:mm a"
-                );
-                const billType =
-                  transaction.bill?.bill_type || "Unknown Bill Type";
-                const statusInfo =
-                  paymentStatusIcons[transaction.status] || {
+      {/* Recent Transactions Section (moved to the bottom) */}
+      <motion.div
+        className="bg-white shadow-md rounded-xl p-4 mt-6"
+        variants={itemVariants}
+      >
+        <h3 className="text-lg font-medium mb-2 text-gray-700 flex items-center">
+          <Clock className="mr-2" /> Recent Transactions
+        </h3>
+        {recentTransactions.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">
+                    Bill Type
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">
+                    Date
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">
+                    Amount
+                  </th>
+                  <th className="px-4 py-2 text-left text-gray-600 text-sm font-semibold">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTransactions.map((transaction) => {
+                  const formattedDate = format(
+                    new Date(transaction.paid_at),
+                    "MMM dd, yyyy, h:mm a"
+                  );
+                  const billType =
+                    transaction.bill?.bill_type || "Unknown Bill Type";
+                  const statusInfo = paymentStatusIcons[transaction.status] || {
                     icon: AlertTriangle,
                     color: "text-gray-500",
                   };
-                const StatusIcon = statusInfo.icon;
+                  const StatusIcon = statusInfo.icon;
 
-                return (
-                  <tr key={transaction.id} className="border-b border-gray-200">  
-                    <td className="px-4 py-2 text-gray-700 text-sm">{billType}</td>
-                    <td className="px-4 py-2 text-gray-700 text-sm">
-                      {formattedDate}
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 text-sm">
-                      Ksh {transaction.amount_paid}
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 text-sm">
-                      <div className="flex items-center">
-                        <StatusIcon
-                          className={`mr-1 w-4 h-4 ${statusInfo.color}`}
-                        />
-                        {transaction.status}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="text-gray-600">No recent transactions.</p>
-      )}
+                  return (
+                    <tr
+                      key={transaction.id}
+                      className="border-b border-gray-200"
+                    >
+                      <td className="px-4 py-2 text-gray-700 text-sm">
+                        {billType}
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 text-sm">
+                        {formattedDate}
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 text-sm">
+                        Ksh {transaction.amount_paid}
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 text-sm">
+                        <div className="flex items-center">
+                          <StatusIcon
+                            className={`mr-1 w-4 h-4 ${statusInfo.color}`}
+                          />
+                          {transaction.status}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-600">No recent transactions.</p>
+        )}
+      </motion.div>
     </motion.div>
-  </motion.div>
-);
+  );
 };
 
 export default Overview;
+
 ================================================================================
 File: ./components/dashboard/ManageBills.tsx
 ================================================================================

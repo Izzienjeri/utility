@@ -1,4 +1,3 @@
-// app/src/components/BillForm.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,9 +13,9 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
-import { toast } from "sonner"; // Import toast from sonner
+import { toast } from "sonner";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 interface BillFormProps {
   userId: string;
@@ -36,7 +35,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   const router = useRouter();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);  // NEW STATE
+  const [isRecurring, setIsRecurring] = useState(false);
 
   const billTypes = [
     {
@@ -119,28 +118,27 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
     }
   }, [router, editBillId]);
 
-  // NEW FUNCTION: CREATE RECURRING BILLS
   const createRecurringBills = async (baseBill: any, token: string) => {
     const billsToCreate = [];
     let nextDueDate = new Date(baseBill.due_date);
 
-    for (let i = 1; i <= 11; i++) {  // Create for next 11 months
+    for (let i = 1; i <= 11; i++) {
       nextDueDate.setMonth(nextDueDate.getMonth() + 1);
       const newBill = {
         ...baseBill,
-        due_date: nextDueDate.toISOString().split('T')[0], // Format to YYYY-MM-DD
+        due_date: nextDueDate.toISOString().split("T")[0],
       };
       billsToCreate.push(newBill);
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/bills/`, {  // Use the SAME endpoint.  Backend handles array.
-        method: 'POST', // Backend needs to accept an array of bills here!
+      const response = await fetch(`${API_BASE_URL}/bills/`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(billsToCreate), // Send the array to the backend
+        body: JSON.stringify(billsToCreate),
       });
 
       const data = await response.json();
@@ -176,7 +174,6 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
       return;
     }
 
-    // Validate Paybill and Account Number
     if (!paybillNumber || !accountNumber) {
       toast.error("Paybill requires both Paybill Number and Account Number.");
       return;
@@ -188,11 +185,10 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         : `${API_BASE_URL}/bills/`;
       const method = editBillId ? "PUT" : "POST";
 
-      // Construct the request body.  Only include the relevant payment details.
       const requestBody: any = {
         bill_type: billType,
         amount: amount,
-        payment_option: "paybill", // Always paybill
+        payment_option: "paybill",
         paybill_number: paybillNumber,
         account_number: accountNumber,
         due_date: dueDate,
@@ -223,11 +219,9 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
         localStorage.removeItem("isFirstTimeUser");
         router.push("/?page=dashboard&ion=manage-bills");
 
-        // NEW: Create recurring bills if toggled
-        if (isRecurring && !editBillId) { // Don't create recurring on edits
-          await createRecurringBills(requestBody, accessToken); // Pass the base bill
+        if (isRecurring && !editBillId) {
+          await createRecurringBills(requestBody, accessToken);
         }
-
       } else {
         toast.error(data.message || "Failed to add bill.");
         setSuccessMessage("");
@@ -459,7 +453,7 @@ const BillForm: React.FC<BillFormProps> = ({ userId, editBillId }) => {
                       className="mr-2 h-5 w-5 text-teal-500 focus:ring-teal-300"
                       checked={isRecurring}
                       onChange={(e) => setIsRecurring(e.target.checked)}
-                      disabled={isEditMode} // Disable on edit
+                      disabled={isEditMode}
                     />
                     <span className="text-gray-200 text-sm font-medium">
                       Create Recurring Bills (Next 11 Months)

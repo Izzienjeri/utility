@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://127.0.0.1:5000";
 
 interface AuthProps {
   initialRoute: "login" | "register" | "billForm" | "dashboard" | "welcome";
@@ -53,18 +53,17 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       const data = await response.json();
 
       if (response.ok) {
-        const accessToken = data.access_token; // Extract token
+        const accessToken = data.access_token;
         localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("userName", data.user.full_name); // Store the user's name
+        localStorage.setItem("userName", data.user.full_name);
 
-        // Extract is_new_user from the response
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
 
         if (isNewUser) {
-          router.push("/?page=welcome"); // Redirect to welcome
+          router.push("/?page=welcome");
         } else {
-          router.push("/?page=dashboard&ion=overview"); // Reload the page
+          router.push("/?page=dashboard&ion=overview");
         }
       } else {
         toast.error(data.message || "Login failed.");
@@ -100,17 +99,15 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
       const data = await response.json();
 
       if (response.ok) {
-        const accessToken = data.access_token; // Extract token
+        const accessToken = data.access_token;
         localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("userName", data.user.full_name); // Store the user's name
+        localStorage.setItem("userName", data.user.full_name);
 
-        // NEW CODE HERE:  Handle is_new_user from registration
         const isNewUser = data.is_new_user;
         localStorage.setItem("isFirstTimeUser", JSON.stringify(isNewUser));
         toast.success(data.message || "Registration successful!");
         setError("");
-        router.push("/?page=welcome"); // Redirect to welcome first
-        // END NEW CODE
+        router.push("/?page=welcome");
       } else {
         if (data.errors) {
           const errorMessages = Object.entries(data.errors)
@@ -189,9 +186,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <Lock className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Welcome Back
-              </h2>
+              <h2 className="text-2xl font-semibold ">Welcome Back</h2>
               <p className="text-gray-300 mt-1 text-center">
                 Sign in to access your account
               </p>
@@ -311,9 +306,7 @@ const Auth: React.FC<AuthProps> = ({ initialRoute }) => {
               <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white text-blue-800 mb-3 shadow-md">
                 <UserPlus className="text-blue-800" size={28} />
               </div>
-              <h2 className="text-2xl font-semibold ">
-                Create Account
-              </h2>
+              <h2 className="text-2xl font-semibold ">Create Account</h2>
               <p className="text-gray-300 mt-1 text-center">Join us today!</p>
             </motion.div>
 

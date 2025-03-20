@@ -1,4 +1,4 @@
-# utils/mpesa.py
+
 import requests
 import os
 import base64
@@ -17,7 +17,7 @@ def get_mpesa_access_token():
 
     try:
         response = requests.get(api_url, headers={"Authorization": f"Basic {encoded_credentials}"})
-        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        response.raise_for_status()  
         return response.json().get("access_token")
     except requests.exceptions.RequestException as e:
         logging.error(f"M-Pesa Access Token Error: {e}")
@@ -51,7 +51,7 @@ def initiate_mpesa_payment(amount, phone_number):
     headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
     try:
         response = requests.post(f"{MPESA_API_URL}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers)
-        response.raise_for_status()  # Raise HTTPError for bad responses
+        response.raise_for_status()  
         json_response = response.json()
         logging.debug(f"M-Pesa STK Push Payload: {payload}")
         return {

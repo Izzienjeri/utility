@@ -1,4 +1,3 @@
-// components/NavBar.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -24,8 +23,8 @@ const NavBar = () => {
         <motion.button
           className="text-gray-700 hover:text-gray-900 flex items-center"
           onClick={handleLogout}
-          whileHover={{ scale: 1.05 }} // Optional: Add a hover effect
-          whileTap={{ scale: 0.95 }} // Optional: Add a tap effect
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Logout

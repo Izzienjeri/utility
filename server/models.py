@@ -1,5 +1,5 @@
-# models.py
-# server/models.py
+
+
 
 import uuid
 from flask_sqlalchemy import SQLAlchemy
@@ -47,9 +47,9 @@ class Bill(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     bill_type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_option = db.Column(db.String(50), nullable=False, default="paybill")  #'paybill' enforced
-    paybill_number = db.Column(db.String(50), nullable=False) #Paybill Number enforce not null
-    account_number = db.Column(db.String(50), nullable=False)  # Account Number (for Paybill) enforce not null
+    payment_option = db.Column(db.String(50), nullable=False, default="paybill")  
+    paybill_number = db.Column(db.String(50), nullable=False) 
+    account_number = db.Column(db.String(50), nullable=False)  
     due_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -65,8 +65,8 @@ class Payment(db.Model):
     bill_id = db.Column(db.String(36), db.ForeignKey("bills.id"), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     amount_paid = db.Column(db.Float, nullable=False)
-    payment_reference = db.Column(db.String(100), nullable=False) # Changed unique=True to unique=False
-    mpesa_receipt_number = db.Column(db.String(100), nullable=True) #  NEW: M-Pesa transaction code
+    payment_reference = db.Column(db.String(100), nullable=False) 
+    mpesa_receipt_number = db.Column(db.String(100), nullable=True) 
     status = db.Column(db.String(20), default="Completed")
     paid_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -95,7 +95,7 @@ class PaymentSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Payment
         load_instance = True
-        datetimeformat = "%Y-%m-%dT%H:%M:%S" # ISO FORMAT
+        datetimeformat = "%Y-%m-%dT%H:%M:%S" 
 
 class PaymentWithBillSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -103,7 +103,7 @@ class PaymentWithBillSchema(ma.SQLAlchemyAutoSchema):
         load_instance = True
         datetimeformat = "%Y-%m-%dT%H:%M:%S"
 
-    bill = fields.Nested(BillSchema) # Nest the bill schema to serialize the bill object
+    bill = fields.Nested(BillSchema) 
 
 
 
@@ -113,4 +113,4 @@ bill_schema = BillSchema()
 bills_schema = BillSchema(many=True)
 payment_schema = PaymentSchema()
 payments_schema = PaymentSchema(many=True)
-payment_with_bill_schema = PaymentWithBillSchema() #This may be unused but can keep if needed in the future
+payment_with_bill_schema = PaymentWithBillSchema() 

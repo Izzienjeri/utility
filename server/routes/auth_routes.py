@@ -32,7 +32,7 @@ class Register(Resource):
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.id, expires_delta=datetime.timedelta(days=1))
-        #ADD is_new_user=True here, for initial redirect
+        
         user_data = UserSchema().dump(new_user)
         return jsonify({"message": "User registered successfully", "user": user_data, "access_token": access_token, "is_new_user": True})
 
@@ -48,8 +48,8 @@ class Login(Resource):
 
         access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
         user_data = UserSchema().dump(user)
-        #ADD THIS LINE:
-        return jsonify({"access_token": access_token, "is_new_user": False, "user": user_data}) #  Return new user status
+        
+        return jsonify({"access_token": access_token, "is_new_user": False, "user": user_data}) 
 
 class Logout(Resource):
     @jwt_required()

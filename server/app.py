@@ -2,7 +2,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS  
 from celery import Celery
 from config import Config
 from models import db, bcrypt

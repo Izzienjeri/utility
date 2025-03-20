@@ -1,4 +1,4 @@
-# routes/bill_routes.py
+
 
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
@@ -20,35 +20,35 @@ class BillListResource(Resource):
         user_id = get_jwt_identity()
         logging.debug(f"Received bill data: {data}")
 
-        # Check if the data is a list or a single dictionary
+        
         if isinstance(data, list):
             bills_data = data
         else:
-            bills_data = [data]  # Convert to a list if it's a single bill
+            bills_data = [data]  
 
         created_bills = []
         validation_errors = []
 
         for bill_data in bills_data:
-            # Validate required fields at the start of the loop
+            
             if not all(k in bill_data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
                 validation_errors.append({"message": "Missing required fields", "bill_data": bill_data})
-                continue  # Skip to the next bill
+                continue  
 
-            # Enforce paybill payment option, always
+            
             bill_data["payment_option"] = "paybill"
 
-            # Validation: Check if only paybill number and account number are provided
+            
             paybill_number = bill_data.get("paybill_number")
             account_number = bill_data.get("account_number")
 
             if not paybill_number or not account_number:
                  validation_errors.append({"message": "Paybill requires both Paybill Number and Account Number", "bill_data": bill_data})
-                 continue  # Skip to the next bill
+                 continue  
 
             try:
-                # Load data into the schema for validation
-                bill = bill_schema.load(bill_data)  # load() returns a dictionary of validated fields
+                
+                bill = bill_schema.load(bill_data)  
                 new_bill = Bill(
                     user_id = user_id,
                     bill_type=bill['bill_type'],
@@ -57,15 +57,15 @@ class BillListResource(Resource):
                     paybill_number=bill['paybill_number'],
                     account_number=bill['account_number'],
                     due_date=bill['due_date']
-                ) # Create a Bill object from the validated data
+                ) 
                 db.session.add(new_bill)
-                created_bills.append(bill_schema.dump(new_bill))  # Dump back to serialized form for the response
+                created_bills.append(bill_schema.dump(new_bill))  
 
 
             except ValidationError as err:
                 logging.debug(f"Validation errors: {err.messages}")
                 validation_errors.append({"message": "Validation error", "errors": err.messages, "bill_data": bill_data})
-                db.session.rollback() # Important: Rollback the session on error
+                db.session.rollback() 
 
 
         if validation_errors:
@@ -73,11 +73,11 @@ class BillListResource(Resource):
 
         try:
             db.session.commit()
-            return {"message": "Bills added successfully", "bills": created_bills}, 201 # Return a dictionary!
+            return {"message": "Bills added successfully", "bills": created_bills}, 201 
         except Exception as e:
-            db.session.rollback() # Rollback in case of error!
+            db.session.rollback() 
             logging.error(f"Database commit error: {e}")
-            return {"message": "Database commit error", "error": str(e)}, 500 # Return a dictionary!
+            return {"message": "Database commit error", "error": str(e)}, 500 
 
     @jwt_required()
     def get(self):
@@ -115,7 +115,7 @@ class BillResource(Resource):
         if not bill:
             return {"message": "Bill not found or unauthorized"}, 404
 
-        # Validate required fields (bill_schema validation isn't sufficient)
+        
         if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
             return {"message": "Missing required fields"}, 400
 
@@ -123,7 +123,7 @@ class BillResource(Resource):
         if errors:
             return {"errors": errors}, 400
 
-         # Enforce paybill payment option, always
+         
         data["payment_option"] = "paybill"
 
         paybill_number = data.get("paybill_number")
@@ -135,7 +135,7 @@ class BillResource(Resource):
 
         bill.bill_type = data["bill_type"]
         bill.amount = data["amount"]
-        bill.payment_option = "paybill"  # Enforce paybill
+        bill.payment_option = "paybill"  
         bill.paybill_number = paybill_number
         bill.account_number = account_number
         bill.due_date = data["due_date"]

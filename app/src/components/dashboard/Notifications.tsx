@@ -1,4 +1,3 @@
-// app/src/components/dashboard/Notifications.tsx
 "use client";
 
 import { motion } from "framer-motion";
