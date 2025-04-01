@@ -1,791 +1,108 @@
+@:~$ sudo apt update && sudo apt upgrade -y
+sudo apt autoremove && sudo apt clean
+Hit:1 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease
+Hit:2 https://download.docker.com/linux/ubuntu lunar InRelease                 
+Hit:3 http://old-releases.ubuntu.com/ubuntu lunar InRelease                    
+Hit:4 https://downloads.nordlayer.com/linux/latest/debian ./stable InRelease   
+Hit:5 http://old-releases.ubuntu.com/ubuntu lunar-updates InRelease            
+Hit:6 http://old-releases.ubuntu.com/ubuntu lunar-backports InRelease          
+Hit:7 https://deb.nodesource.com/node_18.x nodistro InRelease                  
+Hit:8 https://dl.google.com/linux/chrome/deb stable InRelease                  
+Hit:9 http://old-releases.ubuntu.com/ubuntu lunar-security InRelease           
+Hit:10 https://ppa.launchpadcontent.net/git-core/ppa/ubuntu lunar InRelease
+Hit:11 https://ppa.launchpadcontent.net/linuxgndu/sqlitebrowser/ubuntu lunar InRelease
+Hit:12 https://ppa.launchpadcontent.net/rael-gc/rvm/ubuntu lunar InRelease
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Calculating upgrade... Done
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+@:~$ sudo do-release-upgrade
+Checking for a new Ubuntu release
+Your Ubuntu release is not supported anymore.
+For upgrade information, please visit:
+http://www.ubuntu.com/releaseendoflife
 
-========================================
-models.py
-========================================
 
+= Welcome to Ubuntu 24.04 LTS 'Noble Numbat' =
 
+The Ubuntu team is proud to announce Ubuntu 24.04 LTS 'Noble Numbat'.
 
+To see what's new in this release, visit:
+  https://wiki.ubuntu.com/NobleNumbat/ReleaseNotes
 
-import uuid
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
-from flask_marshmallow import Marshmallow
-from datetime import datetime
-from marshmallow import fields, validate
+Ubuntu is a Linux distribution for your desktop or server, with a fast
+and easy install, regular releases, a tight selection of excellent
+applications installed by default, and almost any other software you
+can imagine available through the network.
 
+We hope you enjoy Ubuntu.
 
-db = SQLAlchemy()
-bcrypt = Bcrypt()
-ma = Marshmallow()
+== Feedback and Helping ==
 
+If you would like to help shape Ubuntu, take a look at the list of
+ways you can participate at
 
-def generate_uuid():
-    """Generate a UUID for primary keys"""
-    return str(uuid.uuid4())
+  http://www.ubuntu.com/community/participate/
 
+Your comments, bug reports, patches and suggestions will help ensure
+that our next release is the best release of Ubuntu ever.  If you feel
+that you have found a bug please read:
 
-class User(db.Model):
-    __tablename__ = "users"
+  http://help.ubuntu.com/community/ReportingBugs
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    phone = db.Column(db.String(15), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+Then report bugs using apport in Ubuntu.  For example:
 
-    def __init__(self, full_name, email, phone, password):
-        self.id = generate_uuid()
-        self.full_name = full_name
-        self.email = email
-        self.phone = phone
-        self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+  ubuntu-bug linux
 
-    def check_password(self, password):
-        return bcrypt.check_password_hash(self.password_hash, password)
+will open a bug report in Launchpad regarding the linux package.
 
+If you have a question, or if you think you may have found a bug but
+aren't sure, first try asking on the #ubuntu or #ubuntu-bugs IRC
+channels on Libera.Chat, on the Ubuntu Users mailing list, or on the
+Ubuntu forums:
 
-class Bill(db.Model):
-    __tablename__ = "bills"
+  http://help.ubuntu.com/community/InternetRelayChat
+  http://lists.ubuntu.com/mailman/listinfo/ubuntu-users
+  http://www.ubuntuforums.org/
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    bill_type = db.Column(db.String(50), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    payment_option = db.Column(db.String(50), nullable=False, default="paybill")  
-    paybill_number = db.Column(db.String(50), nullable=False) 
-    account_number = db.Column(db.String(50), nullable=False)  
-    due_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default="Pending")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship("User", backref="bills")
+== More Information ==
 
+You can find out more about Ubuntu on our website, IRC channel and wiki.
+If you're new to Ubuntu, please visit:
 
+  http://www.ubuntu.com/
 
-class Payment(db.Model):
-    __tablename__ = "payments"
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    bill_id = db.Column(db.String(36), db.ForeignKey("bills.id"), nullable=False)
-    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    amount_paid = db.Column(db.Float, nullable=False)
-    payment_reference = db.Column(db.String(100), nullable=False) 
-    mpesa_receipt_number = db.Column(db.String(100), nullable=True) 
-    status = db.Column(db.String(20), default="Completed")
-    paid_at = db.Column(db.DateTime, default=datetime.utcnow)
+To sign up for future Ubuntu announcements, please subscribe to Ubuntu's
+very low volume announcement list at:
 
-    bill = db.relationship("Bill", backref="payments")
-    user = db.relationship("User", backref="payments")
+  http://lists.ubuntu.com/mailman/listinfo/ubuntu-announce
 
 
-class UserSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = User
-        load_instance = True
-        exclude = ("password_hash",)
+Continue [yN] y
+Get:1 Upgrade tool signature [833 B]                                           
+Get:2 Upgrade tool [1,277 kB]                                                  
+Fetched 1,278 kB in 0s (0 B/s)                                                 
+authenticate 'noble.tar.gz' against 'noble.tar.gz.gpg' 
+extracting 'noble.tar.gz'
 
-    full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
-    email = fields.Email(required=True)
-    phone = fields.String(required=True, validate=validate.Length(min=10, max=15))
-    password = fields.String(required=True, validate=validate.Length(min=8), load_only=True)
+Reading cache
 
+Checking package manager
 
-class BillSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Bill
-        load_instance = False
+Can not upgrade 
 
-class PaymentSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Payment
-        load_instance = True
-        datetimeformat = "%Y-%m-%dT%H:%M:%S" 
+An upgrade from 'lunar' to 'noble' is not supported with this tool. 
 
-class PaymentWithBillSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Payment
-        load_instance = True
-        datetimeformat = "%Y-%m-%dT%H:%M:%S"
-
-    bill = fields.Nested(BillSchema) 
-
-
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
-bill_schema = BillSchema()
-bills_schema = BillSchema(many=True)
-payment_schema = PaymentSchema()
-payments_schema = PaymentSchema(many=True)
-payment_with_bill_schema = PaymentWithBillSchema() 
-
-
-========================================
-config.py
-========================================
-
-import os
-
-class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY')
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
-
-    MAIL_SERVER = os.getenv('MAIL_SERVER')
-    MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
-    MAIL_USERNAME = os.getenv('MAIL_USERNAME')
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
-    MAIL_USE_TLS = True
-    MAIL_USE_SSL = False
-
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-
-    
-    MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY')
-    MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET')
-    MPESA_BUSINESS_SHORTCODE = os.getenv('MPESA_BUSINESS_SHORTCODE')  
-    MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL')
-    MPESA_PASSKEY = os.getenv('MPESA_PASSKEY')  
-
-
-========================================
-app.py
-========================================
-
-from flask import Flask
-from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
-from flask_mail import Mail
-from flask_cors import CORS  
-from celery import Celery
-from config import Config
-from models import db, bcrypt
-from routes.auth_routes import auth_blueprint
-from routes.bill_routes import bill_blueprint
-from routes.payment_routes import payment_blueprint
-from flask_marshmallow import Marshmallow
-
-
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        broker=app.config['CELERY_BROKER_URL'],
-        backend=app.config['CELERY_RESULT_BACKEND']
-    )
-    celery.conf.update(app.config)
-    return celery
-
-
-app = Flask(__name__)
-app.config.from_object(Config)
-
-
-db.init_app(app)
-bcrypt.init_app(app)
-jwt = JWTManager(app)
-mail = Mail(app)
-
-CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
-ma = Marshmallow(app)
-
-
-celery = make_celery(app)
-
-
-migrate = Migrate(app, db)
-
-
-app.register_blueprint(auth_blueprint, url_prefix="/auth")
-app.register_blueprint(bill_blueprint, url_prefix="/bills")
-app.register_blueprint(payment_blueprint, url_prefix="/payments")
-
-
-def create_tables():
-    with app.app_context():
-        db.create_all()
-
-
-with app.app_context():
-    db.create_all()
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
-
-========================================
-migrations/env.py
-========================================
-
-import logging
-from logging.config import fileConfig
-
-from flask import current_app
-
-from alembic import context
-
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-fileConfig(config.config_file_name)
-logger = logging.getLogger('alembic.env')
-
-
-def get_engine():
-    try:
-        # this works with Flask-SQLAlchemy<3 and Alchemical
-        return current_app.extensions['migrate'].db.get_engine()
-    except (TypeError, AttributeError):
-        # this works with Flask-SQLAlchemy>=3
-        return current_app.extensions['migrate'].db.engine
-
-
-def get_engine_url():
-    try:
-        return get_engine().url.render_as_string(hide_password=False).replace(
-            '%', '%%')
-    except AttributeError:
-        return str(get_engine().url).replace('%', '%%')
-
-
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-config.set_main_option('sqlalchemy.url', get_engine_url())
-target_db = current_app.extensions['migrate'].db
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
-
-def get_metadata():
-    if hasattr(target_db, 'metadatas'):
-        return target_db.metadatas[None]
-    return target_db.metadata
-
-
-def run_migrations_offline():
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
-    )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def run_migrations_online():
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-
-    # this callback is used to prevent an auto-migration from being generated
-    # when there are no changes to the schema
-    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
-    def process_revision_directives(context, revision, directives):
-        if getattr(config.cmd_opts, 'autogenerate', False):
-            script = directives[0]
-            if script.upgrade_ops.is_empty():
-                directives[:] = []
-                logger.info('No changes in schema detected.')
-
-    conf_args = current_app.extensions['migrate'].configure_args
-    if conf_args.get("process_revision_directives") is None:
-        conf_args["process_revision_directives"] = process_revision_directives
-
-    connectable = get_engine()
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=get_metadata(),
-            **conf_args
-        )
-
-        with context.begin_transaction():
-            context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
-
-
-
-========================================
-routes/auth_routes.py
-========================================
-
-from flask import Blueprint, request, jsonify
-from flask_restful import Api, Resource
-from models import db, User, user_schema, UserSchema
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, unset_jwt_cookies
-import datetime
-
-auth_blueprint = Blueprint("auth", __name__)
-api = Api(auth_blueprint)
-
-class Register(Resource):
-    def post(self):
-        data = request.get_json()
-
-        errors = user_schema.validate(data)
-        if errors:
-            return {"message": "Validation error", "errors": errors}, 400
-
-        if User.query.filter_by(email=data["email"]).first():
-            return {"message": "Email already exists"}, 400
-
-        if User.query.filter_by(phone=data["phone"]).first():
-            return {"message": "Phone number already exists"}, 400
-
-        new_user = User(
-            full_name=data["full_name"],
-            email=data["email"],
-            phone=data["phone"],
-            password=data["password"]
-        )
-
-        db.session.add(new_user)
-        db.session.commit()
-
-        access_token = create_access_token(identity=new_user.id, expires_delta=datetime.timedelta(days=1))
-        
-        user_data = UserSchema().dump(new_user)
-        return jsonify({"message": "User registered successfully", "user": user_data, "access_token": access_token, "is_new_user": True})
-
-class Login(Resource):
-    def post(self):
-        data = request.get_json()
-        email = data.get("email")
-        password = data.get("password")
-
-        user = User.query.filter_by(email=email).first()
-        if not user or not user.check_password(password):
-            return {"message": "Invalid credentials"}, 401
-
-        access_token = create_access_token(identity=user.id, expires_delta=datetime.timedelta(days=1))
-        user_data = UserSchema().dump(user)
-        
-        return jsonify({"access_token": access_token, "is_new_user": False, "user": user_data}) 
-
-class Logout(Resource):
-    @jwt_required()
-    def post(self):
-        response = jsonify({"message": "Successfully logged out"})
-        unset_jwt_cookies(response)
-        return response
-
-api.add_resource(Register, "/register")
-api.add_resource(Login, "/login")
-api.add_resource(Logout, "/logout")
-
-
-========================================
-routes/payment_routes.py
-========================================
-
-
-from flask import Blueprint, request, jsonify
-from flask_restful import Api, Resource
-from models import db, Payment, Bill, User, payment_schema, payments_schema, PaymentWithBillSchema  
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from utils.mpesa import initiate_mpesa_payment
-import logging
-
-payment_blueprint = Blueprint("payments", __name__)
-api = Api(payment_blueprint)
-logging.basicConfig(level=logging.DEBUG)
-
-
-class PaymentResource(Resource):
-    @jwt_required()
-    def post(self):
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        bill_id = data.get("bill_id")
-
-        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
-        if not bill:
-            return {"message": "Bill not found"}, 404
-
-        user = User.query.get(user_id)
-        if not user:
-            return {"message": "User not found"}, 404
-
-        phone_number = user.phone
-        logging.debug(f"Raw Phone Number from DB: {phone_number}")
-
-        
-        if phone_number.startswith("+254"):
-            phone_number = phone_number[1:]  
-        elif phone_number.startswith("0"):
-            phone_number = "254" + phone_number[1:]  
-        elif phone_number.startswith("7"):
-             phone_number = "254" + phone_number  
-
-        logging.debug(f"Formatted Phone Number: {phone_number}")
-        response = initiate_mpesa_payment(bill.amount, phone_number)  
-
-        
-        if response.get("status") == "success":
-            new_payment = Payment(
-                user_id=user_id,
-                bill_id=bill_id,
-                amount_paid=bill.amount,
-                payment_reference=response.get("CheckoutRequestID"), 
-                status="Pending"
-            )
-            db.session.add(new_payment)
-            db.session.commit()
-
-            return jsonify({"message": "Payment initiated successfully", "CheckoutRequestID": response.get("CheckoutRequestID")}) 
-        else:
-            return {"message": "Payment failed", "error": response.get("message")}, 400
-
-
-
-class PaymentHistoryResource(Resource):
-    @jwt_required()
-    def get(self):
-        user_id = get_jwt_identity()
-        payments = Payment.query.filter_by(user_id=user_id).order_by(Payment.paid_at.desc()).limit(5).all()
-
-        
-        return PaymentWithBillSchema(many=True).dump(payments)
-
-class MpesaCallbackResource(Resource):
-    def post(self):
-        """
-        Handles the callback from M-Pesa after a transaction.
-        """
-        callback_data = request.get_json()
-        logging.info("M-Pesa Callback Data Received: %s", callback_data)  
-
-        
-        try:
-            checkout_request_id = callback_data['Body']['stkCallback']['CheckoutRequestID']
-            result_code = callback_data['Body']['stkCallback']['ResultCode']
-            result_desc = callback_data['Body']['stkCallback']['ResultDesc']
-
-            
-            mpesa_receipt_number = None
-            try:
-                for item in callback_data['Body']['stkCallback']['CallbackMetadata']['Item']:
-                    if item['Name'] == 'MpesaReceiptNumber':
-                        mpesa_receipt_number = item['Value']
-                        break
-                
-            except (KeyError, TypeError) as e:
-                logging.warning(f"MpesaReceiptNumber not found in callback data: {e}")
-                
-                
-
-            
-            payment = Payment.query.filter_by(payment_reference=checkout_request_id).first()
-
-            if not payment:
-                logging.error(f"Payment with CheckoutRequestID {checkout_request_id} not found.")
-                return {"message": "Payment not found"}, 404
-
-            if result_code == 0:
-                
-                payment.status = "Completed"
-
-                
-                if mpesa_receipt_number:
-                    payment.mpesa_receipt_number = mpesa_receipt_number 
-                    payment.payment_reference = mpesa_receipt_number
-                else:
-                    logging.info("MpesaReceiptNumber not found in callback data.  Keeping CheckoutRequestID.")
-                    
-
-                
-                bill = Bill.query.filter_by(id=payment.bill_id).first()
-                if bill: 
-                    bill.status = "Paid"
-                else:
-                    logging.error(f"Bill with ID {payment.bill_id} not found.") 
-                    return {"message": f"Bill with ID {payment.bill_id} not found"}, 404
-
-                try:
-                    db.session.commit()
-                    logging.info(f"Payment {payment.id} and Bill {bill.id if bill else 'N/A'} updated successfully.")
-                    
-                    return jsonify({"message": "Payment successful",  "bill_id": bill.id}), 200  
-                except Exception as e:
-                    logging.error(f"Database commit error: {e}")
-                    db.session.rollback() 
-                    return {"message": "Database commit error", "error": str(e)}, 500
-
-
-            else:
-                
-                payment.status = "Failed"
-                try:
-                    db.session.commit()
-                    logging.info(f"Payment {payment.id} marked as Failed.")
-                except Exception as e:
-                    logging.error(f"Database commit error: {e}")
-                    db.session.rollback() 
-                    return {"message": "Database commit error", "error": str(e)}, 500
-                
-                logging.error(f"Payment failed: {result_desc}")
-                return {"message": f"Payment failed: {result_desc}"}, 400
-
-        except (KeyError, TypeError) as e:
-            logging.error(f"Error processing M-Pesa callback: {e}")
-            return {"message": "Invalid callback data"}, 400
-
-api.add_resource(PaymentResource, "/pay")
-api.add_resource(PaymentHistoryResource, "/history")
-api.add_resource(MpesaCallbackResource, "/callback") 
-
-
-========================================
-routes/bill_routes.py
-========================================
-
-
-
-from flask import Blueprint, request, jsonify
-from flask_restful import Api, Resource
-from models import db, Bill, bill_schema, bills_schema
-from flask_jwt_extended import jwt_required, get_jwt_identity
-import logging
-from marshmallow import ValidationError
-
-logging.basicConfig(level=logging.DEBUG)
-
-bill_blueprint = Blueprint("bills", __name__)
-api = Api(bill_blueprint)
-
-
-class BillListResource(Resource):
-    @jwt_required()
-    def post(self):
-        data = request.get_json()
-        user_id = get_jwt_identity()
-        logging.debug(f"Received bill data: {data}")
-
-        
-        if isinstance(data, list):
-            bills_data = data
-        else:
-            bills_data = [data]  
-
-        created_bills = []
-        validation_errors = []
-
-        for bill_data in bills_data:
-            
-            if not all(k in bill_data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
-                validation_errors.append({"message": "Missing required fields", "bill_data": bill_data})
-                continue  
-
-            
-            bill_data["payment_option"] = "paybill"
-
-            
-            paybill_number = bill_data.get("paybill_number")
-            account_number = bill_data.get("account_number")
-
-            if not paybill_number or not account_number:
-                 validation_errors.append({"message": "Paybill requires both Paybill Number and Account Number", "bill_data": bill_data})
-                 continue  
-
-            try:
-                
-                bill = bill_schema.load(bill_data)  
-                new_bill = Bill(
-                    user_id = user_id,
-                    bill_type=bill['bill_type'],
-                    amount=bill['amount'],
-                    payment_option=bill['payment_option'],
-                    paybill_number=bill['paybill_number'],
-                    account_number=bill['account_number'],
-                    due_date=bill['due_date']
-                ) 
-                db.session.add(new_bill)
-                created_bills.append(bill_schema.dump(new_bill))  
-
-
-            except ValidationError as err:
-                logging.debug(f"Validation errors: {err.messages}")
-                validation_errors.append({"message": "Validation error", "errors": err.messages, "bill_data": bill_data})
-                db.session.rollback() 
-
-
-        if validation_errors:
-            return {"message": "Some bills failed validation", "errors": validation_errors}, 400
-
-        try:
-            db.session.commit()
-            return {"message": "Bills added successfully", "bills": created_bills}, 201 
-        except Exception as e:
-            db.session.rollback() 
-            logging.error(f"Database commit error: {e}")
-            return {"message": "Database commit error", "error": str(e)}, 500 
-
-    @jwt_required()
-    def get(self):
-        user_id = get_jwt_identity()
-        bills = Bill.query.filter_by(user_id=user_id).all()
-        return jsonify(bills_schema.dump(bills))
-
-
-class BillResource(Resource):
-    @jwt_required()
-    def get(self, bill_id):
-        user_id = get_jwt_identity()
-        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
-        if not bill:
-            return {"message": "Bill not found or unauthorized"}, 404
-        return jsonify(bill_schema.dump(bill))
-
-    @jwt_required()
-    def delete(self, bill_id):
-        user_id = get_jwt_identity()
-        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
-        if not bill:
-            return {"message": "Bill not found or unauthorized"}, 404
-
-        db.session.delete(bill)
-        db.session.commit()
-        return {"message": "Bill deleted successfully"}, 200
-
-    @jwt_required()
-    def put(self, bill_id):
-        data = request.get_json()
-        user_id = get_jwt_identity()
-
-        bill = Bill.query.filter_by(id=bill_id, user_id=user_id).first()
-        if not bill:
-            return {"message": "Bill not found or unauthorized"}, 404
-
-        
-        if not all(k in data for k in ("bill_type", "amount", "paybill_number", "account_number", "due_date")):
-            return {"message": "Missing required fields"}, 400
-
-        errors = bill_schema.validate(data)
-        if errors:
-            return {"errors": errors}, 400
-
-         
-        data["payment_option"] = "paybill"
-
-        paybill_number = data.get("paybill_number")
-        account_number = data.get("account_number")
-
-        if not paybill_number or not account_number:
-            return {"message": "Paybill requires both Paybill Number and Account Number"}, 400
-
-
-        bill.bill_type = data["bill_type"]
-        bill.amount = data["amount"]
-        bill.payment_option = "paybill"  
-        bill.paybill_number = paybill_number
-        bill.account_number = account_number
-        bill.due_date = data["due_date"]
-
-        db.session.commit()
-        return {"message": "Bill updated successfully", "bill": bill_schema.dump(bill)}
-
-
-api.add_resource(BillListResource, "/")
-api.add_resource(BillResource, "/<string:bill_id>")
-
-
-========================================
-utils/mpesa.py
-========================================
-
-
-import requests
-import os
-import base64
-from datetime import datetime
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-
-MPESA_API_URL = "https://sandbox.safaricom.co.ke"
-
-def get_mpesa_access_token():
-    consumer_key = os.getenv("MPESA_CONSUMER_KEY")
-    consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
-    api_url = f"{MPESA_API_URL}/oauth/v1/generate?grant_type=client_credentials"
-    encoded_credentials = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
-
-    try:
-        response = requests.get(api_url, headers={"Authorization": f"Basic {encoded_credentials}"})
-        response.raise_for_status()  
-        return response.json().get("access_token")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"M-Pesa Access Token Error: {e}")
-        return None
-
-def initiate_mpesa_payment(amount, phone_number):
-    access_token = get_mpesa_access_token()
-    if not access_token:
-        return {"status": "failed", "message": "Failed to obtain M-Pesa access token."}
-
-    business_shortcode = os.getenv("MPESA_BUSINESS_SHORTCODE")
-    passkey = os.getenv("MPESA_PASSKEY")
-    callback_url = os.getenv("MPESA_CALLBACK_URL")
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    password = base64.b64encode(f"{business_shortcode}{passkey}{timestamp}".encode()).decode()
-
-    payload = {
-        "BusinessShortCode": business_shortcode,
-        "Password": password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": int(amount),
-        "PartyA": phone_number,
-        "PartyB": business_shortcode,
-        "PhoneNumber": phone_number,
-        "CallBackURL": callback_url,
-        "AccountReference": "Bill Payment",
-        "TransactionDesc": "Payment of Utility Bill"
-    }
-
-    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-    try:
-        response = requests.post(f"{MPESA_API_URL}/mpesa/stkpush/v1/processrequest", json=payload, headers=headers)
-        response.raise_for_status()  
-        json_response = response.json()
-        logging.debug(f"M-Pesa STK Push Payload: {payload}")
-        return {
-            "status": "success" if json_response.get("ResponseCode") == "0" else "failed",
-            "message": json_response.get("CustomerMessage", json_response.get("ResponseDescription")),
-            "CheckoutRequestID": json_response.get("CheckoutRequestID")
-        }
-    except requests.exceptions.RequestException as e:
-        logging.error(f"M-Pesa STK Push Error: {e}")
-        return {"status": "failed", "message": str(e)}
+@:~$ 
 
